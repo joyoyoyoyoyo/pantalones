@@ -15,6 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
 object Lifecycle extends App {
 
   val snapshot = 0
-  val graph = new Grap
+  println("Hello World")
+//  val graph = new Grap
 
 }

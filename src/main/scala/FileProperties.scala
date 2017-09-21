@@ -9,4 +9,4 @@ sealed trait FileProperties {
   val modified: String
 }
 //new Observable.in
-case class FileINode(dir: String) extends FileProperties
+//case class FileINode(dir: String) extends FileProperties
