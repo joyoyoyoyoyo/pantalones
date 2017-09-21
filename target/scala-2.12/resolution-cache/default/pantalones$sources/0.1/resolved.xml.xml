@@ -4,7 +4,7 @@
 		module="pantalones$sources"
 		revision="0.1"
 		status="integration"
-		publication="20170920220919"
+		publication="20170921040750"
 	/>
 	<configurations>
 		<conf name="compile" visibility="public" description=""/>
