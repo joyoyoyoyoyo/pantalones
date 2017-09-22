@@ -1,4 +1,20 @@
-project/
-target/
+# Scala specific
+*.class
 
-.idea/
+# SBT Specific
+build
+.classpath
+.project
+.settings
+project
+target
+
+
+# Do not commit Intelli J project properties (isolated concern)
+*.idea
+*.iml
+*.iws
+*.ipr
+
+# Do not commit deleted items from Mac OS
+.DS_Store
