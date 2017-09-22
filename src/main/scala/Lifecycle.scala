@@ -1,13 +1,14 @@
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.nio.file.StandardWatchEventKinds
-import java.nio.file.WatchService
+import java.nio.file._
+
 import scala.concurrent.{ExecutionContext, Future}
 import events._
 
+import ExecutionContext.Implicits.global._
 import snapshot.{GlobalSnapshot, LocalSnapshot}
+
+import scala.collection.JavaConverters
 
 // The app will begin by creating a daemon process in the
 //    background
@@ -32,14 +33,44 @@ object Lifecycle extends App {
 
   val path = Paths.get(".")
   val watchService = path.getFileSystem.newWatchService
-  path.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY)
+  path.register(
+    watchService,
+      StandardWatchEventKinds.ENTRY_MODIFY,
+        StandardWatchEventKinds.ENTRY_DELETE,
+          StandardWatchEventKinds.ENTRY_CREATE)
+
+  def watch(watchService: WatchService) = {
+    @scala.annotation.tailrec
+    def loop(watchS: WatchService, key: WatchKey) {
+      key match {
+        case key: WatchKey =>
+          import scala.collection.JavaConverters._
+          val watchEvent = key.pollEvents()
+          println(watchEvent.get(0).context())
+        case _ => println("Error")
+      }
+      key.reset()
+      loop(watchS, watchS.take())
+    }
+    loop(watchService, watchService.take())
+  }
+  watch(watchService)
+
   val myNumber = LocalSnapshot(0)
   val global = GlobalSnapshot(0)
 
-  println("Hello World")
-  val x = FileCreated("")
+  val y = 10
+  val exe = ExecutionContext.Implicits.global
+
+  //
+  FileCreated("").handleFileEvent(println("Hi"))(exe)
+  FileModified("").handleFileEvent(println("how"))(exe)
+  FileDeleted("").handleFileEvent(println("are"))(exe)
+  FileModified("").handleFileEvent(println("you"))(exe)
+
+  FileDeleted("").handleFileEvent(println("doing"))(exe)
+
 //  currentThread().sleep(1000)
-  println(x)
 }
 
 // p 729

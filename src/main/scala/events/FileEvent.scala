@@ -15,11 +15,11 @@ sealed trait FileEvent {
 
   val fileName: String
 
-  def handleFileEvent[FileEvent](action: FileEvent)(implicit exeCxt: ExecutionContext): Future[Int] = {
+  def handleFileEvent[FileEvent](action: FileEvent)(implicit exeCxt: ExecutionContext): (FileEvent) => Future[FileEvent] = {
     this match {
-      case FileModified(_) => Future(10)
-      case FileCreated(_) => Future(20)
-      case FileDeleted(_) => Future(30)
+      case FileModified(_) => Future(_)(exeCxt)
+      case FileCreated(_) => Future(_)(exeCxt)
+      case FileDeleted(_) => Future(_)(exeCxt)
     }
   }
 }
@@ -30,6 +30,11 @@ final case class FileDeleted(fileName: String) extends FileEvent
 
 final case class FileModified(fileName: String) extends FileEvent
 
+//import scala.concurrent._
+//sealed trait FileEvent
+//case class FileCreated(fileID: SerialVersionUID) extends FileEvent
+//case class FileDeleted(fileID: SerialVersionUID) extends FileEvent
+//case class FileChanged(fileID: SerialVersionUID) extends FileEvent
 //final case class Owner(username: String)
 
 
