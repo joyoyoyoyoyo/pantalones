@@ -1,6 +1,11 @@
 package events
 
+import java.io.File
+import java.nio.file.{Files, Path, Paths}
+import java.util.concurrent.atomic.AtomicReference
+
 import scala.concurrent.{ExecutionContext, Future}
+import scala.io.Source
 
 /**
   *
@@ -29,6 +34,15 @@ final case class FileCreated[FileCreated <: FileEvent](fileName: String) extends
 final case class FileDeleted(fileName: String) extends FileEvent
 
 final case class FileModified(fileName: String) extends FileEvent
+
+object FindLastModified extends App {
+  val temp: Path = Files.createTempFile("test", "-jar")
+  val file = Paths.get("temp0")
+  val time = Files.getLastModifiedTime(file)
+  val sample = Paths.get("build.sbt")
+  println(sample)
+  println(time)
+}
 
 //import scala.concurrent._
 //sealed trait FileEvent
