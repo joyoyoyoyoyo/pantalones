@@ -8,7 +8,6 @@
 //    a ∈ Assume  ::= p(t⋯) | p(t⋯) ⟜ g | &a⋯ | ∀x⋯.a
 // prog ∈ Program ::= a⋯ ⊢ g
 
-//TODO: insert jar
 //import scala.util.parsing.
 //class DependenciesFileParser extends Parser {
 //

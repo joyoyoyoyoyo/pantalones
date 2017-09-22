@@ -1,6 +1,10 @@
-import java.nio.file.{Paths, StandardWatchEventKinds, WatchKey, WatchService}
+import java.nio.file._
+import java.util
+import java.util.Collection
 
-object LiveWatchService {
+import scala.collection.{JavaConverters, immutable}
+
+object LiveWatchService extends App {
   val path = Paths.get(".")
     val watchService = path.getFileSystem.newWatchService
     path.register(
@@ -15,8 +19,9 @@ object LiveWatchService {
         key match {
           case key: WatchKey =>
             import scala.collection.JavaConverters._
-            val watchEvent = key.pollEvents()
-            println(watchEvent.get(0).context())
+            val watchEvent: util.List[WatchEvent[_]] = key.pollEvents()
+            println(s"Event type: ${watchEvent.get(0).kind()}\tFile: ${watchEvent.get(0).context()}")
+//            println(watchEvent.get(0).context())
           case _ => println("Error")
         }
         key.reset()

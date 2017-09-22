@@ -47,6 +47,7 @@ object Lifecycle extends App {
 
   FileDeleted("").handleFileEvent(println("doing"))(exe)
 
+//  import scala.util.parsing.inp
 //  currentThread().sleep(1000)
 }
 
