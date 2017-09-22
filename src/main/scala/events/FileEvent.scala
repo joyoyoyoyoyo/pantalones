@@ -20,6 +20,16 @@ sealed trait FileEvent {
 
   val fileName: String
 
+  /**
+    * Recursive matching
+    *
+    * //TODO: @code
+    *
+    * @param action: action performed by the validator, triggered on exeCxt
+    * @param exeCxt execution context, to resolve ambiguity on the the thread
+    * @tparam FileEvent: a FileEvent ADT for resolving ADT Product types and ADT Or Types
+    * @return
+    */
   def handleFileEvent[FileEvent](action: FileEvent)(implicit exeCxt: ExecutionContext): (FileEvent) => Future[FileEvent] = {
     this match {
       case FileModified(_) => Future(_)(exeCxt)
