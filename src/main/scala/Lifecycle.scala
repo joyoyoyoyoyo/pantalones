@@ -1,8 +1,12 @@
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
-
+import java.nio.file.Path
+import java.nio.file.Paths
+import java.nio.file.StandardWatchEventKinds
+import java.nio.file.WatchService
 import scala.concurrent.{ExecutionContext, Future}
 import events._
+
 import snapshot.{GlobalSnapshot, LocalSnapshot}
 
 // The app will begin by creating a daemon process in the
@@ -17,15 +21,34 @@ import snapshot.{GlobalSnapshot, LocalSnapshot}
 //  val processors: Int = java.lang.Runtime.getRuntime.availableProcessors()
 //  val base: Int = 8 * processors * processors
 object Lifecycle extends App {
+  /**
+    * Use SIPS algorithm to disjointly inspect classpaths, will find cycles, will find walks
+    *
+    * Dependency classes as separate classes:
+    * Library: A
+    * Library: B
+    * Sources Root: C
+    **/
 
+  val path = Paths.get(".")
+  val watchService = path.getFileSystem.newWatchService
+  path.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY)
   val myNumber = LocalSnapshot(0)
   val global = GlobalSnapshot(0)
-  //val globalSnapshot = CI() // points to travis server
 
   println("Hello World")
   val x = FileCreated("")
 //  currentThread().sleep(1000)
   println(x)
 }
+
+// p 729
+//def elem(kind: String, p: Elem => Boolean) = {
+//  new Parser[Elem] {
+//    def apply(in: Input) =
+//      if (p(in.first)) Success(in.first, in.rest)
+//      else Failure(kind + " expected", in) //TODO: ValidationFailure extends Failure
+//  }
+//}
 
 //type FileChanged = FileModified

@@ -8,5 +8,5 @@ sealed trait Snapshot {
 //  val eventNum: Int
 }
 final case class LocalSnapshot(clock: Int) extends Snapshot
-
 final case class GlobalSnapshot(clock: Int) extends Snapshot
+//TODO: Point to travis CI server
