@@ -52,3 +52,7 @@ object Lifecycle extends App {
 //}
 
 //type FileChanged = FileModified
+
+
+//TODO: Canonical traverse
+// expected == action
