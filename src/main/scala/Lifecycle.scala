@@ -1,5 +1,9 @@
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
+
 import scala.concurrent.{ExecutionContext, Future}
+import events._
+import snapshot.{GlobalSnapshot, LocalSnapshot}
 
 // The app will begin by creating a daemon process in the
 //    background
@@ -14,8 +18,14 @@ import scala.concurrent.{ExecutionContext, Future}
 //  val base: Int = 8 * processors * processors
 object Lifecycle extends App {
 
-  val snapshot = 0
-  println("Hello World")
-//  val graph = new Grap
+  val myNumber = LocalSnapshot(0)
+  val global = GlobalSnapshot(0)
+  //val globalSnapshot = CI() // points to travis server
 
+  println("Hello World")
+  val x = FileCreated("")
+//  currentThread().sleep(1000)
+  println(x)
 }
+
+//type FileChanged = FileModified
