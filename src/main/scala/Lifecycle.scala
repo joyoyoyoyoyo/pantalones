@@ -1,4 +1,4 @@
-import java.util.concurrent.Executors
+import java.util.concurrent.{ConcurrentHashMap, Executors}
 import java.util.concurrent.atomic.AtomicInteger
 import java.nio.file._
 
@@ -21,6 +21,7 @@ import scala.collection.JavaConverters
 //  println(x)
 //  val processors: Int = java.lang.Runtime.getRuntime.availableProcessors()
 //  val base: Int = 8 * processors * processors
+
 object Lifecycle extends App {
   /**
     * Use SIPS algorithm to disjointly inspect classpaths, will find cycles, will find walks
@@ -39,14 +40,14 @@ object Lifecycle extends App {
   val y = 10
   val exe = ExecutionContext.Implicits.global
 
+//  val store = collection.concurrent.INode.newRootNode
+  class KVStore[K, V] {
+    val store = new ConcurrentHashMap[K, V]()
 
-  FileCreated("").handleFileEvent(println("Hi"))(exe)
-  FileModified("").handleFileEvent(println("how"))(exe)
-  FileDeleted("").handleFileEvent(println("are"))(exe)
-  FileModified("").handleFileEvent(println("you"))(exe)
-
-  FileDeleted("").handleFileEvent(println("doing"))(exe)
-
+    def sawFileCreated = Future.successful(FileCreated("").handleFileEvent(println("Hi"))(exe))
+    def sawFileModified = FileModified("").handleFileEvent(println("how"))(exe)
+    def sawFileDeleted = FileDeleted("").handleFileEvent(println("are"))(exe)
+  }
 //  import scala.util.parsing.inp
 //  currentThread().sleep(1000)
 }
