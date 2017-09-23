@@ -8,8 +8,10 @@ class FileSystem(val root: String) {
 
   def initializeContext() = {
     val rootPath = Paths.get(root)
-    val getRootContext = projectDir + (rootPath.getFileName.toString -> "yo")
-    projectDir.foreach(println)
+    val rootCtx = projectDir + (rootPath.toAbsolutePath.toString -> "yo")
+    val rootAgain = rootCtx + (Paths.get(rootPath.toUri).toString -> "yo")
+
+    rootAgain.foreach(println)
   }
 
 }
