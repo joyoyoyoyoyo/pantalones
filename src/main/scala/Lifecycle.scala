@@ -1,8 +1,6 @@
 import java.util.concurrent.{ConcurrentHashMap, LinkedBlockingQueue}
 
 import scala.concurrent.{ExecutionContext, Future}
-import events._
-import snapshot.{GlobalSnapshot, LocalSnapshot}
 import scala.io.Codec
 
 object Lifecycle extends App {
@@ -21,11 +19,7 @@ object Lifecycle extends App {
   for (line <- stream_in.getLines())
     queue.put(line)
   queue.forEach(println(_))
-
-
-  val myNumber = LocalSnapshot(0)
-  val global = GlobalSnapshot(0)
-
+  
   val y = 10
   val exe = ExecutionContext.Implicits.global
 
