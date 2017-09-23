@@ -15,7 +15,7 @@ object ValidateApprovals extends App {
 
   val queue = new LinkedBlockingQueue[String]()
   val root = new FileSystem(".")
-  val stream_in = scala.io.Source.fromFile("./src/main/scala/Lifecycle.scala")(Codec.UTF8)
+  val stream_in = scala.io.Source.fromFile(s"./src/main/scala/${"ValidateApprovals.scala"}")(Codec.UTF8)
   for (line <- stream_in.getLines())
     queue.put(line)
   queue.forEach(println(_))
