@@ -1,8 +1,6 @@
-import java.nio.file.{Path, Paths}
+import java.nio.file.{Paths}
 
 import scala.collection.immutable.TreeMap
-import scala.concurrent._
-import java.util.concurrent.ConcurrentHashMap
 class FileSystem(val root: String) {
   val projectDir = TreeMap[String, String]()
 
