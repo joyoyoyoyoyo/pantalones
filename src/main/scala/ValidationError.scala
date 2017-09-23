@@ -1,5 +1,3 @@
-package errors
-
 sealed trait ValidationError {
 
 }

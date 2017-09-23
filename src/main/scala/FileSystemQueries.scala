@@ -1,4 +1,3 @@
-package queries
 
 import java.nio.file.attribute.FileTime
 import java.nio.file.{Files, Path, Paths}
