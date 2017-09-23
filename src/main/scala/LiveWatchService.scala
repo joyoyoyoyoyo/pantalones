@@ -1,33 +1,37 @@
 import java.nio.file._
 import java.util
-import java.util.Collection
 
-import scala.collection.{JavaConverters, immutable}
+object LiveWatchService {
+  val root = Paths.get(".")
 
-object LiveWatchService extends App {
-  val path = Paths.get(".")
-    val watchService = path.getFileSystem.newWatchService
+  def watching(path: Path): WatchService = {
+    val ws = path.getFileSystem.newWatchService
     path.register(
-      watchService,
-        StandardWatchEventKinds.ENTRY_MODIFY,
-          StandardWatchEventKinds.ENTRY_DELETE,
-            StandardWatchEventKinds.ENTRY_CREATE)
+      ws,
+      StandardWatchEventKinds.ENTRY_MODIFY,
+      StandardWatchEventKinds.ENTRY_DELETE,
+      StandardWatchEventKinds.ENTRY_CREATE)
+    ws
+  }
 
-    def watch(watchService: WatchService) = {
-      @scala.annotation.tailrec
-      def loop(watchS: WatchService, key: WatchKey) {
-        key match {
-          case key: WatchKey =>
-            import scala.collection.JavaConverters._
-            val watchEvent: util.List[WatchEvent[_]] = key.pollEvents()
-            println(s"Event type: ${watchEvent.get(0).kind()}\tFile: ${watchEvent.get(0).context()}")
-//            println(watchEvent.get(0).context())
-          case _ => println("Error")
-        }
-        key.reset()
-        loop(watchS, watchS.take())
+  val ws = watching(path = root)
+
+
+  def watch(watchService: WatchService) = {
+    @scala.annotation.tailrec
+    def loop(watchS: WatchService, key: WatchKey) {
+      key match {
+        case key: WatchKey =>
+          val watchEvent: util.List[WatchEvent[_]] = key.pollEvents()
+          println(s"Event type: ${watchEvent.get(0).kind()}\tFile: ${watchEvent.get(0).context()}")
+        case _ => println("Error")
       }
-      loop(watchService, watchService.take())
+      key.reset()
+      loop(watchS, watchS.take())
     }
-    watch(watchService)
+
+    loop(watchService, watchService.take())
+  }
+
+  watch(ws)
 }
