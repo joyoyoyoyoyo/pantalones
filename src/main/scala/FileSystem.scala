@@ -15,6 +15,8 @@ class FileSystem(val root: String) {
 }
 
 object FileSystem extends App {
+  def getDependencies(owners: List[String]) = Nil
+
   val x = new FileSystem(".")
   x.initializeContext()
 }

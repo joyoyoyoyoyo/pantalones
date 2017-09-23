@@ -1,5 +1,6 @@
 import java.util.concurrent.{ConcurrentHashMap, LinkedBlockingQueue}
 
+import scala.collection.immutable.Queue
 import scala.concurrent.{ExecutionContext, Future}
 import scala.io.Codec
 
@@ -13,12 +14,12 @@ object ValidateApprovals extends App {
     * Sources Root: C
     **/
 
-  val queue = new LinkedBlockingQueue[String]()
+  val queue = Queue()
   val root = new FileSystem(".")
-  val stream_in = scala.io.Source.fromFile(s"../../Desktop/${"repo_root/OWNERS"}")(Codec.UTF8)
-  for (line <- stream_in.getLines())
-    queue.put(line)
-  queue.forEach(println(_))
+  val stream_in = scala.io.Source.fromFile(s"../../Desktop/${"repo_root/OWNERS"}")(Codec.UTF8).getLines().toList
+  val owners = Queue.empty[String]./:(stream_in)((acc, elem) => elem :: acc)
+  FileSystem.getDependencies(owners)
+  owners.map(println)
 
   val y = 10
   val exe = ExecutionContext.Implicits.global
