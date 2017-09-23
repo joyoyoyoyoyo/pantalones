@@ -3,7 +3,7 @@ import java.util.concurrent.{ConcurrentHashMap, LinkedBlockingQueue}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.io.Codec
 
-object Lifecycle extends App {
+object ValidateApprovals extends App {
   /**
     * Use SIPS algorithm to disjointly inspect classpaths, will find cycles, will find walks
     *
@@ -19,7 +19,7 @@ object Lifecycle extends App {
   for (line <- stream_in.getLines())
     queue.put(line)
   queue.forEach(println(_))
-  
+
   val y = 10
   val exe = ExecutionContext.Implicits.global
 
