@@ -1,7 +1,3 @@
-package events
-
-import java.util.concurrent.atomic.AtomicReference
-
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
