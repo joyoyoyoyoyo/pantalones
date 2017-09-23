@@ -1,4 +1,4 @@
-import java.util.concurrent.{ConcurrentHashMap, Executors}
+import java.util.concurrent.{ConcurrentHashMap, Executors, LinkedBlockingQueue}
 import java.util.concurrent.atomic.AtomicInteger
 import java.nio.file._
 
@@ -9,6 +9,7 @@ import ExecutionContext.Implicits.global._
 import snapshot.{GlobalSnapshot, LocalSnapshot}
 
 import scala.collection.JavaConverters
+import scala.io.Codec
 
 // The app will begin by creating a daemon process in the
 //    background
@@ -32,6 +33,12 @@ object Lifecycle extends App {
     * Sources Root: C
     **/
 
+  val queue = new LinkedBlockingQueue[String]()
+  val root = new FileSystem(".")
+  val stream_in = scala.io.Source.fromFile("./src/main/scala/Lifecycle.scala")(Codec.UTF8)
+  for (line <- stream_in.getLines())
+    queue.put(line)
+  queue.forEach(println(_))
 
 
   val myNumber = LocalSnapshot(0)
