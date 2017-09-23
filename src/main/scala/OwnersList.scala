@@ -15,7 +15,9 @@ final case class Username(owner: String) extends User
   * Owner(Username("Stu_Hood"), Owner(Username("Jack"), Owner(Username("jd"), NoneUser))
   * Owner(Username(Stu_Hood),Owner(Username(doe),Owner(Username(jd),NoneUser)))
   */
-object OwnerOps {
+object Owner {
+
+  implicit val formatFromFile = """[a-z]+""".r
 
   def getOwner(users: OwnersList, username: String): User = {
     users match {
@@ -29,7 +31,7 @@ object OwnerOps {
 object OwnersList extends App {
   val owners = Owner(Username("Stu_Hood"), Owner(Username("doe"), Owner(Username("jd"), EmptyOwnersList)))
 
-  println(OwnerOps.getOwner(owners,"jd"))
+  println(Owner.getOwner(owners,"jd"))
 }
 
 
