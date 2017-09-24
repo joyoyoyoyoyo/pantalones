@@ -53,18 +53,24 @@ object ValidateApprovals extends App {
   val parallelism = Runtime.getRuntime.availableProcessors * 32
   val forkJoinPool = new ForkJoinPool(parallelism)
 
+  import scala.concurrent._
+  import scala.concurrent.duration._
+  import ExecutionContext.Implicits._
+
   // asynchronously cache files in project repository
   val cache = concurrent.TrieMap[String,String]()
   val owners = Future { Source.fromFile(ReadOnly.OWNERS.toString)(Codec.UTF8).getLines }
   val paths = Future { Source.fromFile(ReadOnly.DEPENDENCIES.toString)(Codec.UTF8).getLines }
-  val localSnapshot = cache.snapshot
-
   val transitiveDependencies = ???
 
   def findCanonicalFiles(files: Future[Iterable[String]]) = {
     val root = Paths.get(".").iterator()
     root.next().
   }
+
+  val localSnapshot = cache.snapshot
+
+  val transitiveSnapshot = cache.snapshot()
 
   val approvals = Future {
     args match {
