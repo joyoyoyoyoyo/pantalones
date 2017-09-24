@@ -7,13 +7,11 @@ import scala.io.Codec
 
 object ValidateApprovals extends App {
   Logger.trace("Starting validate_approvals task")
-  val queue = Queue()
+  //val settings = Context()
+  // val context
   val root = new FileSystem(".")
-  val stream_in = scala.io.Source.fromFile(new File("OWNERS"))(Codec.UTF8).getLines().toList
-  val owners = Queue.empty[String]./:(stream_in)((acc, elem) => elem :: acc)
   //TODO: Test File not found
-  FileSystem.getDependencies(owners)
-  owners.map(println)
+//  FileSystem.map(depedency -> owner)
 }
 
 object Logger {

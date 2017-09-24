@@ -1,9 +1,17 @@
+import java.io.File
 import java.nio.file.{Files, Path, Paths}
 import java.nio.file.attribute.FileTime
 
-import scala.collection.immutable.TreeMap
+import scala.collection.immutable.{Queue, TreeMap}
+import scala.io.Codec
+
+
 class FileSystem(val root: String) {
+  val queue = Queue()
   val projectDir = TreeMap[String, String]()
+  val stream_in = scala.io.Source.fromFile(new File("OWNERS"))(Codec.UTF8).getLines().toList
+  val owners = Queue.empty[String]./:(stream_in)((acc, elem) => elem :: acc)
+  owners.foreach(println)
 
   def initializeContext() = {
     val rootPath = Paths.get(root)
