@@ -53,14 +53,14 @@ case class Append[+T](left: ConcTree[T], right: ConcTree[T]) extends ConcTree[T]
   val level = 1 + math.max(left.level, right.level)
   val size = left.size + right.size
 
-  override def normalized = {
-    def wrap[T](xs: ConcTree[T], ys: ConcTree[T]): ConcTree[T] = (xs: @unchecked) match {
-      case Append(ws, zs) => wrap(ws, zs <> ys)
-      case xs => xs <> ys
-    }
-
-    wrap(left, right)
-  }
+//  override def normalized = {
+//    def wrap[T](xs: ConcTree[T], ys: ConcTree[T]): ConcTree[T] = (xs: @unchecked) match {
+//      case Append(ws, zs) => wrap(ws, zs <> ys)
+//      case xs => xs <> ys
+//    }
+//
+//    wrap(left, right)
+//  }
 }
 
 

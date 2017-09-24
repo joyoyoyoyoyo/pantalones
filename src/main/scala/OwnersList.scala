@@ -1,7 +1,14 @@
 import scala.util.Success
 
-sealed trait OwnersList
-final case object EmptyOwnersList extends OwnersList
+sealed trait OwnersList {
+//  def head: Owner
+//  def tail: OwnersList
+}
+
+case object EmptyOwnersList extends OwnersList {
+//  def head = Owner(Nil)
+//  def tail = Logger.error("List tail is empty. We can not inductively break this base list")
+}
 final case class Owner(head: User, tail: OwnersList) extends OwnersList
 
 sealed trait User
@@ -19,21 +26,14 @@ object Owner {
 
   implicit val formatFromFile = """[a-z]+""".r
 
-  def getOwner(users: OwnersList, username: String): User = {
+  def getUser(users: OwnersList, username: String): User = {
     users match {
       case Owner(head, tail) if Username(username) == head => head
-      case Owner(head, tail) => getOwner(tail, username)
+      case Owner(head, tail) => getUser(tail, username)
       case EmptyOwnersList => Nil
     }
   }
 }
-
-object OwnersList extends App {
-  val owners = Owner(Username("Stu_Hood"), Owner(Username("doe"), Owner(Username("jd"), EmptyOwnersList)))
-
-  println(Owner.getOwner(owners,"jd"))
-}
-
 
 
 
