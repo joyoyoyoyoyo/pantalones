@@ -9,6 +9,9 @@ import scala.io.Codec
 class FileSystem(val root: String) {
   val queue = Queue()
   val projectDir = TreeMap[String, String]()
+  // Read separately from source, read project context
+//  val file
+  // traverse down project tree
   val stream_in = scala.io.Source.fromFile(new File("OWNERS"))(Codec.UTF8).getLines().toList
   val owners = Queue.empty[String]./:(stream_in)((acc, elem) => elem :: acc)
   owners.foreach(println)
