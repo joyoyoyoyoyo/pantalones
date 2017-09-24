@@ -1,5 +1,0 @@
-package pantalones
-
-class temp {
-
-}

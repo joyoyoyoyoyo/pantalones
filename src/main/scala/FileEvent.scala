@@ -9,9 +9,7 @@ import scala.concurrent.{ExecutionContext, Future}
   * Youtube: Essential Scala: Six Core Principles, @14:23
   * Scala-lang: https://scala-lang.org/_#
   */
-sealed trait FileEvent {
-
-  val fileName: String
+abstract sealed class FileEvent[+T] {
 
   /**
     * Recursive matching
@@ -19,23 +17,32 @@ sealed trait FileEvent {
     * //TODO: @code
     *
     * @param action: action performed by the validator, triggered on exeCxt
-    * @param exeCxt execution context, to resolve ambiguity on the the thread
+    * @param exeCtx execution context, to resolve ambiguity on the the thread
     * @tparam FileEvent: a FileEvent ADT for resolving ADT Product types and ADT Or Types
     * @return
     */
-  def handleFileEvent[FileEvent](action: FileEvent)(implicit exeCxt: ExecutionContext): (FileEvent) => Future[FileEvent] = {
+  def handleFileEvent[FileEvent](action: FileEvent)(implicit exeCtx: ExecutionContext): (FileEvent) => Future[FileEvent] = {
     this match {
-      case FileModified(_) => Future(_)(exeCxt)
-      case FileCreated(_) => Future(_)(exeCxt)
-      case FileDeleted(_) => Future(_)(exeCxt)
+      case FileModified(_) => Future(_)(exeCtx)
+      case FileCreated(_) => Future(_)(exeCtx)
+      case FileDeleted(_) => Future(_)(exeCtx)
     }
   }
 }
 
-final case class FileCreated[FileCreated <: FileEvent](fileName: String) extends FileEvent
+trait FileInfo {
+  def fileName: String
+  def absolutePath: String
+  def lastModified: String
+  def path: String
+}
 
-final case class FileDeleted(fileName: String) extends FileEvent
+final case class FileCreated[T](fileName: String) extends FileEvent[T]
 
-final case class FileModified(fileName: String) extends FileEvent
+final case class FileDeleted[T](fileName: String) extends FileEvent[T]
 
-final case class FileChanged(filename: String, fileID: SerialVersionUID)
+final case class FileModified[T](fileName: String) extends FileEvent[T]
+
+final case class FileChanged[T](filename: String, fileID: SerialVersionUID) extends FileEvent[T]
+
+//abstract case class FileRead[T](filename: String) extends FileEvent[T]
