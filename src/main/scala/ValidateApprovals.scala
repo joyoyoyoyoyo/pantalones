@@ -1,33 +1,100 @@
 
 import java.io.File
 import java.nio.file.{Files, Paths}
+import java.util.concurrent.atomic.AtomicReference
 
-import scala.collection.immutable.Queue
-import scala.collection.parallel.mutable.ParTrieMap
+import ReadOnly.ReadOnly
+
+//import scala.collection.parallel.mutable.ParTrieMap
 import scala.concurrent.{ExecutionContext, Future}
-import scala.io.Codec
+import scala.io.{Codec, Source}
+import scala.collection.immutable.Queue
 //import java.util.concurrent._
-
 //import pantalones.common.{DefaultTaskScheduler, TaskScheduler}
 //import java.util.concurrent.RecursiveTask
-import java.util.concurrent.ForkJoinPool
+
 import java.util.concurrent.ForkJoinPool
 
 import scala.collection.concurrent
 import scala.util.DynamicVariable
 
 object ValidateApprovals extends App {
-  val forkJoinPool = new ForkJoinPool
-  val scheduler = new DynamicVariable[TaskScheduler](new DefaultTaskScheduler)
 
-  class NewTaskScheduler {
-    scheduler.value.
+  // threading and parellism context
+  val parallelism = Runtime.getRuntime.availableProcessors * 32
+  val forkJoinPool = new ForkJoinPool(parallelism)
+
+
+  // asynchronously cache files in project repository
+  val cache = concurrent.TrieMap[String,String]()
+
+  def findCanonicalFiles() = {
+
   }
+  def ownersFile = Future { Source.fromFile(ReadOnly.OWNERS.toString)(Codec.UTF8).getLines }
+  def dependencyFile = Future { Source.fromFile(ReadOnly.DEPENDENCIES.toString)(Codec.UTF8).getLines }
 
-  val open = ParTrieMap[Node, Parent]()
-  val closed = ParTrieMap[Node, Parent]()
+
+  //
+  val dependenceyGraph =
+
+//  val owner = AtomicReference[FileEvent](FileCreated("."))
+//
+//  AtomicReference
+  // process files in parallel to build dependency graph
+//  val parallel =
 
 }
+
+object ReadOnly extends Enumeration {
+  type ReadOnly = Value
+  val OWNERS, DEPENDENCIES = Value
+}
+
+def findCanonicalFiles(patterns: ReadOnly) = {
+
+}
+
+def cache() = {
+}
+
+
+
+
+
+
+sealed trait Command
+case class GetFileList(dir: String) extends Command
+case class CopyFile(srcpath: String, destpath: String) extends Command
+case class DeleteFile(path: String) extends Command
+case class FindFiles(regex: String) extends Command
+
+
+
+sealed trait State
+
+class Idle extends State
+
+class Creating extends State
+
+class Copying(val n: Int) extends State
+
+class Deleting extends State
+
+class Entry(val isDir: Boolean) {
+  val state = new AtomicReference[State](new Idle)
+}
+
+
+
+//  val scheduler = new DynamicVariable[TaskScheduler](new DefaultTaskScheduler)
+//  class NewTaskScheduler {
+//    scheduler.value.
+//  }
+
+//  val open = ParTrieMap[Node, Parent]()
+//  val closed = ParTrieMap[Node, Parent]()
+
 
 //  val results = ParTrieMap()
 //  val owners = (1 until 100)
@@ -121,15 +188,15 @@ object ValidateApprovals extends App {
 //}
 
 
-  // instantiate in memory model
+// instantiate in memory model
 //  val forkJoinPool = new
 //  val cache = new concurrent.TrieMap[Int, String]()
 //  val approvers = new concurrent.TrieMap[User, String]()
 //  val transients = new concurrent.TrieMap[Directory]()
 //val depedencies
-  //  val snapshot = cache.snapshot()
+//  val snapshot = cache.snapshot()
 
-  // do action in memory
+// do action in memory
 
 //  new AtomicReference[List[A]](Nil)
 //  cache {

@@ -1,3 +1,5 @@
+import java.io.File
+
 import scala.concurrent.{ExecutionContext, Future}
 
 /**
@@ -32,10 +34,32 @@ abstract sealed class FileEvent[+T] {
 
 trait FileInfo {
   def fileName: String
-  def absolutePath: String
+  def exists: Boolean
+  def isDirectory: String
+  def canonicalPath: String
   def lastModified: String
   def path: String
+  def parent: FileInfo
 }
+
+//def refresh(file: File) = { // cache original values
+//  val origExists = exists
+//  val origLastModified = lastModified
+//  val origDirectory = directory
+//  val origLength = length
+//  // refresh the values
+//  name = file.getName
+//  exists = file.exists
+//  directory = if (exists) file.isDirectory
+//  else false
+//  lastModified = if (exists) file.lastModified
+//  else 0
+//  length = if (exists && !directory) file.length
+//  else 0
+//  // Return if there are changes
+//  exists != origExists || lastModified != origLastModified || directory != origDirectory || length != origLength
+//}
+
 
 final case class FileCreated[T](fileName: String) extends FileEvent[T]
 
