@@ -26,7 +26,9 @@ case class CLI(
   changedFiles: List[String],
   approvers: List[String]) {
 
-  def parse(args: Seq[String]): (List[String], List[String]) = {
+  def parse(args: Seq[String]
+
+         ): (List[String], List[String]) = {
     (approvers, changedFiles)
 //    args match {
 //      case "--usage" => ???
@@ -44,23 +46,24 @@ object CLI {
 
 
 object ValidateApprovals extends App {
-  val (targetApprovers, targetFiles) = CLI(args)
+  val (targetApprovers, targetFiles) = Future { CLI(args) }
+
+
   // threading and parellism context
   val parallelism = Runtime.getRuntime.availableProcessors * 32
   val forkJoinPool = new ForkJoinPool(parallelism)
-//  val taskSupport = new parallel.ForkJoinTaskSupport(forkJoinPool)
-
 
   // asynchronously cache files in project repository
-  // trie map uses O(logn)
   val cache = concurrent.TrieMap[String,String]()
-  val owners: Future[Iterator[String]] = Future { Source.fromFile(ReadOnly.OWNERS.toString)(Codec.UTF8).getLines }
+  val owners = Future { Source.fromFile(ReadOnly.OWNERS.toString)(Codec.UTF8).getLines }
   val paths = Future { Source.fromFile(ReadOnly.DEPENDENCIES.toString)(Codec.UTF8).getLines }
+  val localSnapshot = cache.snapshot
+
+  val transitiveDependencies = ???
 
   def findCanonicalFiles(files: Future[Iterable[String]]) = {
-    files.Init match {
-      case
-    }
+    val root = Paths.get(".").iterator()
+    root.next().
   }
 
   val approvals = Future {
