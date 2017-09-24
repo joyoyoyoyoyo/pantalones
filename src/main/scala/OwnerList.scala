@@ -9,7 +9,7 @@ import scala.util.Success
 //case object EmptyOwnerList$ extends OwnerList {
 //  def head = Owner(Nil)
 //  def tail = Logger.error("List tail is empty. We can not inductively break this base list")
-}
+//}
 //final case class Owner(head: User, tail: OwnerList) extends OwnerList
 
 sealed trait Owner {

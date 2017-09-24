@@ -4,6 +4,10 @@ import java.nio.file.{Files, Paths}
 import java.util.concurrent.atomic.AtomicReference
 
 import ReadOnly.ReadOnly
+import sun.tools.jar.CommandLine
+
+import scala.collection.parallel
+import scala.util.Success
 
 //import scala.collection.parallel.mutable.ParTrieMap
 import scala.concurrent.{ExecutionContext, Future}
@@ -18,25 +22,62 @@ import java.util.concurrent.ForkJoinPool
 import scala.collection.concurrent
 import scala.util.DynamicVariable
 
-object ValidateApprovals extends App {
+case class CLI(
+  changedFiles: List[String],
+  approvers: List[String]) {
 
+  def parse(args: Seq[String]): (List[String], List[String]) = {
+    (approvers, changedFiles)
+//    args match {
+//      case "--usage" => ???
+//      case "--approvals" => ???
+//    }
+//    this
+  }
+}
+
+object CLI {
+  def apply(that: Array[String]) = {
+    new CLI(List("Bob", "Jenny"), List("Bob", "Jenny"))
+  }
+}
+
+
+object ValidateApprovals extends App {
+  val (targetApprovers, targetFiles) = CLI(args)
   // threading and parellism context
   val parallelism = Runtime.getRuntime.availableProcessors * 32
   val forkJoinPool = new ForkJoinPool(parallelism)
+//  val taskSupport = new parallel.ForkJoinTaskSupport(forkJoinPool)
 
 
   // asynchronously cache files in project repository
+  // trie map uses O(logn)
   val cache = concurrent.TrieMap[String,String]()
+  val owners: Future[Iterator[String]] = Future { Source.fromFile(ReadOnly.OWNERS.toString)(Codec.UTF8).getLines }
+  val paths = Future { Source.fromFile(ReadOnly.DEPENDENCIES.toString)(Codec.UTF8).getLines }
 
-  def findCanonicalFiles() = {
-
+  def findCanonicalFiles(files: Future[Iterable[String]]) = {
+    files.Init match {
+      case
+    }
   }
-  def ownersFile = Future { Source.fromFile(ReadOnly.OWNERS.toString)(Codec.UTF8).getLines }
-  def dependencyFile = Future { Source.fromFile(ReadOnly.DEPENDENCIES.toString)(Codec.UTF8).getLines }
 
+  val approvals = Future {
+    args match {
+//      case cache.
+    }
+  }
+
+  val changedFiles = Future {
+    Success(cache.get(""))
+  }
+
+  val directoryies = approvals
+//  def directories = Future { }
 
   //
-  val dependenceyGraph =
+//  val dependenceyGraph =
 
 //  val owner = AtomicReference[FileEvent](FileCreated("."))
 //
@@ -51,11 +92,12 @@ object ReadOnly extends Enumeration {
   val OWNERS, DEPENDENCIES = Value
 }
 
-def findCanonicalFiles(patterns: ReadOnly) = {
+def traverseFiles(patterns: ReadOnly) = {
 
 }
 
 def cache() = {
+
 }
 
 
