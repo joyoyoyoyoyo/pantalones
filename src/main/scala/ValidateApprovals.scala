@@ -7,9 +7,11 @@ import scala.concurrent.Future
 import scala.io.{Codec, Source}
 import java.util.concurrent.ForkJoinPool
 
+import ValidateApprovals.acceptors
+
 import scala.collection.concurrent
 import scala.collection.concurrent.TrieMap
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 object ValidateApprovals extends App {
   val projectPath = new File(".").getCanonicalPath + "/"
@@ -45,14 +47,36 @@ object ValidateApprovals extends App {
 
   val root = new File(".")
   walkTree(root)(executionContext)
-//  val message = approve(acceptors, modifiedFiles)
-//  println(message)
   localPathToSuccessors.foreach(println)
-  def approve(acceptors: Set[String], changedFiles: Set[String]) = {
 
+  println("Accepted")
+//  approve(acceptors, modifiedFiles)
+//
+//  def approve(approvers: List[String], precommitFiles: List[String]) = {
+//
+//    def findDependencies(approvals: List[String], precommitFiles: List[String], changedFile: String): List[String] = {
+//      approvals match {
+//        case found => {
+//          Success("Valid")
+//          findApprovers(approvers.head, approvers.tail, changedFile)
+//          findDependencies(approvals,precommitFiles.tail, precommitFiles, found)
+//          Nil
+//        }
+//        case _ => Nil
+//      }
+//    }
+//    def findApprovers(approving: String, approvers: List[String], file: String) = {
+//      approving match {
+//        case _ :: Nil => Nil
+//        case head :: tail => {
+//        }
+//        case _ => println
+//
+//      }
+//    }
+//
+//  }
 
-
-  }
 
 
   def parallelTraverse[A, B, C, D](
