@@ -27,12 +27,6 @@ object ValidateApprovals extends App {
   // Our persistent data structures
   val cacheTree = concurrent.TrieMap[String, File]()
   val snapshot = cacheTree.snapshot
-  val cacheDir = concurrent.TrieMap[String, File]()
-  val ownersRepository = concurrent.TrieMap[String, List[String]]()
-  val dependenciesRepository = concurrent.TrieMap[String, List[String]]()
-  val directoryPrivilegesRepo = concurrent.TrieMap[String, List[String]]()
-
-
 
   val root = new File(".")
   walkTree(root)(executionContext)
@@ -48,10 +42,7 @@ object ValidateApprovals extends App {
 
   def parallelTraverse[A, B, C, D](
         localFile: File,
-        cacheDirectories: File => Unit,
-        cacheOwners: File => Unit,
-        cacheDependencies: File => Unit,
-        cacheFiles: File => Unit) (implicit ec: ExecutionContext): Future[Unit] = {
+        onVisit: File => Unit) (implicit ec: ExecutionContext): Future[Unit] = {
     localFile match {
       case directories if directories.isDirectory => { Future.successful(cacheDirectories(directories)) }
       case owners if owners.getName.endsWith(ReadOnly.OWNERS.toString) => { Future.successful(cacheOwners(owners)) }
@@ -70,6 +61,7 @@ object ValidateApprovals extends App {
   // asynchronously cache files in project repository
   def cacheDirectories(file: File) = {
     cacheTree.put(file.getCanonicalPath, file)
+//    val item = new Dependency(dependencies)
   }
   def cacheFiles(file: File) = {
     cacheTree.put(file.getCanonicalPath, file)
