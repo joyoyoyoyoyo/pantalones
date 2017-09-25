@@ -52,134 +52,55 @@ object ValidateApprovals extends App {
 
   // threading and parellism context
   val parallelism = Runtime.getRuntime.availableProcessors * 32
-//  val forkJoinPool = new concurrent.ForkJoinPool(parallelism)
-  import collection.parallel.ParMap
-  val executorService = Executors.newFixedThreadPool(parallelism)
-  val executionContext = ExecutionContext.fromExecutorService(executorService)
-
-
+  val forkJoinPool = new ForkJoinPool(parallelism)
+  val executionContext = ExecutionContext.fromExecutorService(forkJoinPool)
+  //val executorService = Executors.newFixedThreadPool(parallelism)
 
   // asynchronously cache files in project repository
   val cacheTree = concurrent.TrieMap[String, File]()
-
-//  def traverse
-//  val owners = Future { Source.fromFile(ReadOnly.OWNERS.toString)(Codec.UTF8).getLines }
-//  val paths = Future { Source.fromFile(ReadOnly.DEPENDENCIES.toString)(Codec.UTF8).getLines }
-//  val transitiveDependencies = ???
-
-  def cacheDirectories(file: File) = cacheTree.put(file.getAbsolutePath, file)
-  def cacheFiles(file: File) = println(file.getName)
-  def cacheOwners(file: File) = cacheTree.put(file.getAbsolutePath, file)
-  def cacheDependencies(file: File) = cacheTree.put(file.getAbsolutePath, file)
-
+  cacheTree.clear()
+  val cacheDirectories = concurrent.TrieMap[String, File]()
+  val users = concurrent.TrieMap[String, File]()
   val root = new File(".")
-//  val root = Node(path=".", rootFile.listFiles.toList)
-
-  val x = walkTree(root)
-  println(x)
-
-  def walkTree(file: File): Iterable[File] = {
-    parallelTraverse(file, cacheFiles, cacheFiles, cacheFiles, cacheFiles)(executionContext)
+  walkTree(root)(executionContext)
+  def walkTree(file: File)(implicit ec: ExecutionContext): Iterable[File] = {
+    Future { parallelTraverse(file, cacheFiles, cacheOwners, cacheDependencies, cacheFiles)(ec) }
     val children = new Iterable[File] {
       def iterator = if (file.isDirectory) file.listFiles.iterator else Iterator.empty
     }
     Seq(file) ++: children.flatMap(walkTree)
   }
 
-  def parallelTraverse[A, B, C, D](dir: File, taskA: File => Unit, taskB: File => Unit, taskC: File => Unit, taskD: File => Unit)
-                                  (implicit ec: ExecutionContext): Future[Unit] = {
-    // parallel operations
-//    FileSystems.getDefault.getPath(root).
-    dir match {
-      case directories if directories.isDirectory => {
-        Future.successful(taskA(directories))
-      }
-      case files if files.isFile => {
-        Future.successful(taskB(files))
-      }
-      case owners if owners.getName.endsWith(ReadOnly.OWNERS.toString) => {
-        Future.successful(taskC(owners))
-      }
-      case dependencies if dependencies.getName.endsWith(ReadOnly.DEPENDENCIES.toString) => {
-        Future.successful(taskD(dependencies))
-      }
+  cacheTree.keySet.foreach(println)
+
+  def parallelTraverse[A, B, C, D](
+        localFile: File,
+        taskA: File => Unit,
+        taskB: File => Unit,
+        taskC: File => Unit,
+        taskD: File => Unit) (implicit ec: ExecutionContext): Future[Unit] = {
+    localFile match {
+      case directories if directories.isDirectory => { Future.successful(taskA(directories)) }
+      case owners if owners.getName.endsWith(ReadOnly.OWNERS.toString) => { Future.successful(taskC(owners)) }
+      case dependencies if dependencies.getName.endsWith(ReadOnly.DEPENDENCIES.toString) => { Future.successful(taskD(dependencies)) }
+//      case files if files.isFile => { Future.successful(taskB(files)) }
     }
-//    Seq(dir) ++: children.flatMap(parallelTraverse(_))
   }
 
 
+  def cacheDirectories(file: File): Unit = cacheDirectories.put(file.getAbsolutePath, file)
+  def cacheFiles(file: File) = cacheTree.put(file.getPath,file)
+  def cacheOwners(file: File) = cacheTree.put(file.getPath,file)
+  def cacheDependencies(file: File) = { cacheTree.put(file.getAbsolutePath, file)
+//    Logger.info(s"${file.getAbsoluteFile}")
+  }
 
 
+//  val owners = Future { Source.fromFile(ReadOnly.OWNERS.toString)(Codec.UTF8).getLines }
+//  val paths = Future { Source.fromFile(ReadOnly.DEPENDENCIES.toString)(Codec.UTF8).getLines }
+//  val transitiveDependencies = ???
 
 
-//
-//
-//  def getDir() = 1
-//  def getFiles() = 1
-//  def getOwners() = 1
-//  def getDependencies() = 1
-//
-//  val root = Paths.get(".")
-////  val cache = parallelTraverse[Int,Int,Int,Int](root, getDir,getFiles, getOwners, getDependencies)
-////    { (acc,file) => if (file.isDirectory) taskA else taskB  }
-//
-//
-  case class Node(path: String, sub: List[Node])
-//
-////  val root = new File(".")  // enables foreach
-//
-//  //  val dir = FileSystems.getDefault.getPath(".")
-////  val root = FileSystems.getDefault.getPath(".")
-////  Files.walk(root).iterator.asScala
-////  Files.list(Paths.get(".")).flatMap {
-////    path => {
-////      path.toFile.is
-////    }
-////  }
-//  val transitive = concurrent.TrieMap[String, String]()
-//
-////  def traverseDirectory(file: File) = {
-////    val root = FileSystems.getDefault.getPath(".")
-////    //    val root.p
-//////    Fales.walk(root).
-////    Files.walk(root).map(
-////
-////      currentFile => {
-////        currentFile.toFile match {
-////          case dir if dir.isDirectory => {
-////            val parent = dir.getParentFile.getAbsolutePath
-//////            val
-////            //          val directoryInfo = Future {  }
-////          }
-////          case localFile => {
-////
-////          }
-////
-////        }
-////      }
-////    )
-////  }
-//
-//
-//
-//
-//  def traverseDirectory(file: File): Node = {
-//    val (directories, files) = file.listFiles.toList.partition(_.isDirectory)
-//    val (owners) = files.filter(ls => ls.getName.contains(ReadOnly.values))
-//    val depedencies = files.filter(ls => ls.getName.endsWith(ReadOnly.DEPENDENCIES.toString))
-////        .withFilter(ls => ls.)
-////          .
-////            .|| ReadOnly.DEPENDENCIES.toString))
-////        .partition(local => local.getName.equals(ReadOnly.OWNERS.toString))
-//    directories
-//    if(directories.isEmpty) {
-//      Node(file.getAbsolutePath, files.map((file: File )=> Node(file.getAbsolutePath, List.empty[Node])))
-//    } else {
-//      Node(file.getAbsolutePath, directories.map(directory => traverseDirectory(directory)))
-//    }
-//  }
-////  traverseDirectory(root)
-//
 //  val localSnapshot = cache.snapshot
 //
 //  val transitiveSnapshot = cache.snapshot()
