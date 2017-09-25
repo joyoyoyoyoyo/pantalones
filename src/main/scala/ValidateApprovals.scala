@@ -1,12 +1,15 @@
 
 import java.io.File
 import java.nio.file.{FileSystems, Files, Paths}
+import java.util.concurrent.{ForkJoinTask, RecursiveTask}
 import java.util.concurrent.atomic.AtomicReference
 
 import ReadOnly.ReadOnly
 
 import scala.collection.concurrent.TrieMap
-import scala.util.Success
+import scala.collection.mutable
+import scala.collection.parallel.immutable.ParSeq
+import scala.util.{DynamicVariable, Success}
 
 //import scala.collection.parallel.mutable.ParTrieMap
 import scala.concurrent.Future
@@ -53,27 +56,48 @@ object ValidateApprovals extends App {
 //  val executorService = Executors.newFixedThreadPool(forkJoinPool)
 //  val executionContext = ExecutionContext.fromExecutorService(executorService)
 
-  import scala.concurrent._
-  import ExecutionContext.Implicits._
+
 
   // asynchronously cache files in project repository
-  val cache = concurrent.TrieMap[String,String]()
+  val cacheTree = concurrent.TrieMap[String, File]()
 
 //  def traverse
 //  val owners = Future { Source.fromFile(ReadOnly.OWNERS.toString)(Codec.UTF8).getLines }
 //  val paths = Future { Source.fromFile(ReadOnly.DEPENDENCIES.toString)(Codec.UTF8).getLines }
 //  val transitiveDependencies = ???
 
-  @scala.annotation.tailrec
-  def traverse(dir: File, taskA: () => Unit): Unit =
+  def cacheDirectories(file: File) = cacheTree.put(file.getAbsolutePath, file)
+  def cacheFiles(file: File) = cacheTree.put(file.getAbsolutePath, file)
+  def cacheOwners(file: File) = cacheTree.put(file.getAbsolutePath, file)
+  def cacheDependencies(file: File) = cacheTree.put(file.getAbsolutePath, file)
+
+
+
+  def parallelTraverse[A, B, C, D](dir: File, taskA: A => (), taskB: B => (), taskC: C => (), taskD: D => (): Unit = {
     // parallel operations
-    dir.listFiles.par {
-      case directories if directories.isDirectory => taskA { }
-      case files if files.isFile => files
-      case owners if owners.getName.endsWith("OWNERS") => owners
-      case dependencies if dependencies.getName.endsWith("DEPENDENCIES") => dependencies
-    }
-    { (acc,file) => if (file.isDirectory) taskA else taskB  }
+   dir.listFiles.toList.par.map {
+      case directories if directories.isDirectory => Future(taskA(directories))
+      case files if files.isFile => Future(taskB(files))
+      case owners if owners.getName.endsWith("OWNERS") => Future(taskC(owners))
+      case dependencies if dependencies.getName.endsWith("DEPENDENCIES") => Future(taskD(dependencies))
+    } foreach { _}
+  }
+
+
+
+
+
+
+
+
+  def getDir() = 1
+  def getFiles() = 1
+  def getOwners() = 1
+  def getDependencies() = 1
+
+  val root = Paths.get(".")
+//  val cache = parallelTraverse[Int,Int,Int,Int](root, getDir,getFiles, getOwners, getDependencies)
+//    { (acc,file) => if (file.isDirectory) taskA else taskB  }
 
 
   case class Node(path: String, sub: List[Node])
