@@ -41,24 +41,27 @@ case class CLI(
 }
 
 object CLI {
-  def apply(that: Array[String]) = {
-    new CLI(List("Bob", "Jenny"), List("Bob", "Jenny"))
-  }
+  def main(args: Array[String]) = {
+    args.split("")
+
 }
 
 
-object ValidateApprovals extends App {
+object ValidateApprovals {
 //  val (targetApprovers, targetFiles) = Future { CLI(args) }
   val approves = List()
   val changedFiles = List()
+
 
   // threading and parellism context
   val parallelism = Runtime.getRuntime.availableProcessors * 32
   val forkJoinPool = new ForkJoinPool(parallelism)
   val executionContext = ExecutionContext.fromExecutorService(forkJoinPool)
+
   //val executorService = Executors.newFixedThreadPool(parallelism)
 
   // asynchronously cache files in project repository
+  // https://stackoverflow.com/questions/29499381/what-is-a-triemap-and-what-is-its-advantages-disadvantages-compared-to-a-hashmap/38700133#38700133
   val cacheTree = concurrent.TrieMap[String, File]()
   val snapshot = cacheTree.snapshot
   val cacheDirectories = concurrent.TrieMap[String, File]()
@@ -68,8 +71,24 @@ object ValidateApprovals extends App {
   val root = new File(".")
   walkTree(root)(executionContext)
 
-
   cacheTree.keySet.foreach(println)
+
+  sealed trait INode {
+    def file: File
+  }
+  case class Directory(file: File) extends INode
+  case class OwnersFile(file: File) extends INode
+  case class DependencyFile(file: File) extends INode
+  case class NonValidatorFile(file: File) extends INode
+  object INode {
+    def apply(node: File) = {
+      if (node.isDirectory)  NonValidatorFile(node)
+      if (node.getName.endsWith(ReadOnly.OWNERS.toString)) OwnersFile(node)
+      if (node.getName.endsWith(ReadOnly.DEPENDENCIES.toString)) DependencyFile(node)
+      if (node.isFile) NonValidatorFile(node)
+    }
+  }
+
 
   def parallelTraverse[A, B, C, D](
         localFile: File,
@@ -78,10 +97,10 @@ object ValidateApprovals extends App {
         taskC: File => Unit,
         taskD: File => Unit) (implicit ec: ExecutionContext): Future[Unit] = {
     localFile match {
-      case directories if directories.isDirectory => { Future.successful(taskA(directories)) }
-      case owners if owners.getName.endsWith(ReadOnly.OWNERS.toString) => { Future.successful(taskC(owners)) }
-      case dependencies if dependencies.getName.endsWith(ReadOnly.DEPENDENCIES.toString) => { Future.successful(taskD(dependencies)) }
-//      case files if files.isFile => { Future.successful(taskB(files)) }
+      case Directory(localFile) => { Future.successful(taskA(directories)) }
+      case OwnersFile(localFile) => { Future.successful(taskB(owners)) }
+      case DependencyFile(localFile) if dependencies.getName.endsWith(ReadOnly.DEPENDENCIES.toString) => { Future.successful(taskC(dependencies)) }
+      case files if files.isFile => { Future.successful(taskD(files)) }
     }
   }
 
@@ -93,12 +112,10 @@ object ValidateApprovals extends App {
     Seq(file) ++: children.flatMap(walkTree)
   }
 
-  def cacheDirectories(file: File) = cacheDirectories.put(file.getAbsolutePath, file)
+  def cacheDirectories(file: File) = cacheTree.put(file.getAbsolutePath, file)
   def cacheFiles(file: File) = cacheTree.put(file.getPath,file)
   def cacheOwners(file: File) = cacheTree.put(file.getPath,file)
-  def cacheDependencies(file: File) = { cacheTree.put(file.getAbsolutePath, file)
-//    Logger.info(s"${file.getAbsoluteFile}")
-  }
+  def cacheDependencies(file: File) =  cacheTree.put(file.getAbsolutePath, file)
 
 
 //  val owners = Future { Source.fromFile(ReadOnly.OWNERS.toString)(Codec.UTF8).getLines }
