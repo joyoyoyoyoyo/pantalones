@@ -34,6 +34,7 @@ object ValidateApprovals extends App {
   // on a read, we determine a directories dependencies
   val localPathToDependents = concurrent.TrieMap[String, List[String]]()
   val localPathToAuthorizers = concurrent.TrieMap[String, List[String]]()
+  val localPathToSuccessors = concurrent.TrieMap[String, String]()
   val snapshot = cacheTree.snapshot
   val cacheDir = concurrent.TrieMap[String, File]()
   val ownersRepository = concurrent.TrieMap[String, List[String]]()
@@ -46,7 +47,7 @@ object ValidateApprovals extends App {
   walkTree(root)(executionContext)
 //  val message = approve(acceptors, modifiedFiles)
 //  println(message)
-  localPathToAuthorizers.foreach(println)
+  localPathToSuccessors.foreach(println)
   def approve(acceptors: Set[String], changedFiles: Set[String]) = {
 
 
@@ -77,9 +78,17 @@ object ValidateApprovals extends App {
   // asynchronously cache files in project repository
   def cacheDirectories(file: File)(implicit ec: ExecutionContext) = {
     cacheTree.put(file.getCanonicalPath, file)
+    val parent = file.getParentFile.getCanonicalFile
+    if (!root.getCanonicalFile.equals(parent))
+      localPathToSuccessors.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)
+
   }
   def cacheFiles(file: File) = {
     cacheTree.put(file.getCanonicalPath, file)
+    val parent = file.getParentFile.getCanonicalFile
+    if (!root.getCanonicalFile.equals(parent))
+    localPathToSuccessors.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)
+
   }
   def cacheOwners(file: File)(implicit ec: ExecutionContext) = {
     val owners = { Future.successful(Source.fromFile(file)(Codec.UTF8).getLines.toList) }
@@ -87,6 +96,10 @@ object ValidateApprovals extends App {
       case Success(authorizedFiles) => {
         val uniqueUsers = localPathToAuthorizers.getOrElse(file.getCanonicalPath, List[String]()) ::: authorizedFiles
         localPathToAuthorizers.put(file.getCanonicalPath, uniqueUsers)
+        val parent = file.getParentFile.getCanonicalFile
+        if (!root.getCanonicalFile.equals(parent))
+        localPathToSuccessors.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)
+
       }
     }
   }
@@ -98,6 +111,10 @@ object ValidateApprovals extends App {
       case Success(list) => {
         val canonicalDependency = localPathToDependents.getOrElse(file.getCanonicalPath, List[String]()) ::: list
         localPathToDependents.put(file.getCanonicalPath, canonicalDependency)
+        val parent = file.getParentFile.getCanonicalFile
+        if (!root.getCanonicalFile.equals(parent)) {
+          localPathToSuccessors.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)
+        }
       }
     }
   }
