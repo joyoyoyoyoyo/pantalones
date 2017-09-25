@@ -73,13 +73,13 @@ object ValidateApprovals extends App {
 
 
 
-  def parallelTraverse[A, B, C, D](dir: File, taskA: A => (), taskB: B => (), taskC: C => (), taskD: D => (): Unit = {
+  def parallelTraverse[A, B, C, D](dir: File, taskA: A => (), taskB: B => (), taskC: C => (), taskD: D => ()) = {
     // parallel operations
-   dir.listFiles.toList.par.map {
+    dir.listFiles.toList.par.map {
       case directories if directories.isDirectory => Future(taskA(directories))
       case files if files.isFile => Future(taskB(files))
-      case owners if owners.getName.endsWith("OWNERS") => Future(taskC(owners))
-      case dependencies if dependencies.getName.endsWith("DEPENDENCIES") => Future(taskD(dependencies))
+      case owners if owners.getName.endsWith(ReadOnly.OWNERS.toString) => Future(taskC(owners))
+      case dependencies if dependencies.getName.endsWith(ReadOnly.DEPENDENCIES.toString) => Future(taskD(dependencies))
     } foreach { _}
   }
 
