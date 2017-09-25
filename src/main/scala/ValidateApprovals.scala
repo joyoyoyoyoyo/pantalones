@@ -33,7 +33,7 @@ object ValidateApprovals extends App {
   val cacheDir = concurrent.TrieMap[String, File]()
   val ownersRepository = concurrent.TrieMap[String, List[String]]()
   val dependenciesRepository = concurrent.TrieMap[String, List[String]]()
-
+  val directoryPrivilegesRepo = concurrent.TrieMap[String, List[String]]()
 
 
 
@@ -79,15 +79,12 @@ object ValidateApprovals extends App {
   }
   def cacheOwners(file: File) = {
     val owners = Source.fromFile(file)(Codec.UTF8).getLines.toTraversable
+
     owners.foreach( user =>
       ownersRepository.update(user, file.getCanonicalPath :: ownersRepository.getOrElse(user,List()) ))
-//    val paths = Source.fromFile(file)(Codec.UTF8).getLines.toList
-//
-////    val owners = Source.fromFile(file)(Codec.UTF8).getLines
-////    owners.foldLeft(0 until owners.length){ (acc, username) =>
-////      ownersRepository.put(username, file.getCanonicalPath :: ownersRepository.getOrElse(username, List()))
-////      acc
-//    }
+
+    val directoryPrivileges = owners.toList
+    directoryPrivilegesRepo.update(file.getCanonicalPath, directoryPrivileges ::: directoryPrivilegesRepo.getOrElse(file.getCanonicalPath,List()))
 
     cacheTree.put(file.getCanonicalPath, file)
 
