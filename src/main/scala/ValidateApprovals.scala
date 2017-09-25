@@ -37,46 +37,71 @@ object ValidateApprovals extends App {
   val forkJoinPool = new ForkJoinPool(parallelism)
   val executionContext = ExecutionContext.fromExecutorService(forkJoinPool)
 
-  // asynchronously cache files in project repository
+  // Our persistent data structures
   val cacheTree = concurrent.TrieMap[String, File]()
   val snapshot = cacheTree.snapshot
-  val cacheDirectories = concurrent.TrieMap[String, File]()
-  val owners = List()
-  val dependencies = List()
+  val cacheDir = concurrent.TrieMap[String, File]()
+  val ownersRepository = concurrent.TrieMap[String, List[String]]()
+  val dependenciesRepository = concurrent.TrieMap[String, String]()
+
+
+
+
   val root = new File(".")
   walkTree(root)(executionContext)
+//  traversed
+
   cacheTree.keySet.foreach(println)
+//  val transientDependencies = GraphDAG(dependenciesRepository)
+
 
   def parallelTraverse[A, B, C, D](
         localFile: File,
-        taskA: File => Unit,
-        taskB: File => Unit,
-        taskC: File => Unit,
-        taskD: File => Unit) (implicit ec: ExecutionContext): Future[Unit] = {
+        cacheDirectories: File => Unit,
+        cacheOwners: File => Unit,
+        cacheDependencies: File => Unit,
+        cacheFiles: File => Unit) (implicit ec: ExecutionContext): Future[Unit] = {
     localFile match {
-      case directories if directories.isDirectory => { Future.successful(taskA(directories)) }
-      case owners if owners.getName.endsWith(ReadOnly.OWNERS.toString) => { Future.successful(taskC(owners)) }
-      case dependencies if dependencies.getName.endsWith(ReadOnly.DEPENDENCIES.toString) => { Future.successful(taskD(dependencies)) }
-//      case files if files.isFile => { Future.successful(taskB(files)) }
+      case directories if directories.isDirectory => { Future.successful(cacheDirectories(directories)) }
+      case owners if owners.getName.endsWith(ReadOnly.OWNERS.toString) => { Future.successful(cacheOwners(owners)) }
+      case dependencies if dependencies.getName.endsWith(ReadOnly.DEPENDENCIES.toString) => { Future.successful(cacheDependencies(dependencies)) }
+//      case files if files.isFile => { Future.successful(handleProjFile(files)) }
     }
   }
 
   def walkTree(file: File)(implicit ec: ExecutionContext): Iterable[File] = {
-    Future { parallelTraverse(file, cacheFiles, cacheOwners, cacheDependencies, cacheFiles)(ec) }
+    Future { parallelTraverse(file, cacheDirectories, cacheOwners, cacheDependencies, cacheFiles)(ec) }
     val children = new Iterable[File] {
       def iterator = if (file.isDirectory) file.listFiles.iterator else Iterator.empty
     }
     Seq(file) ++: children.flatMap(walkTree)
   }
 
-  def cacheDirectories(file: File) = cacheTree.put(file.getAbsolutePath, file)
-  def cacheFiles(file: File) = cacheTree.put(file.getPath,file)
-  def cacheOwners(file: File) = cacheTree.put(file.getPath,file)
-  def cacheDependencies(file: File) = { cacheTree.put(file.getAbsolutePath, file)
-//    Logger.info(s"${file.getAbsoluteFile}")
+  // asynchronously cache files in project repository
+
+  def cacheDirectories(file: File) = {
+    cacheTree.put(file.getCanonicalPath, file)
+  }
+  def cacheFiles(file: File) = {
+    cacheTree.put(file.getCanonicalPath, file)
+  }
+  def cacheOwners(file: File) = {
+//    val owners = Source.fromFile(ReadOnly.OWNERS.toString)(Codec.UTF8).getLines.toList
+//    val paths = Source.fromFile(ReadOnly.DEPENDENCIES.toString)(Codec.UTF8).getLines.toList
+//
+////    val owners = Source.fromFile(file)(Codec.UTF8).getLines
+////    owners.foldLeft(0 until owners.length){ (acc, username) =>
+////      ownersRepository.put(username, file.getCanonicalPath :: ownersRepository.getOrElse(username, List()))
+////      acc
+//    }
+    cacheTree.put(file.getCanonicalPath, file)
+
+  }
+  def cacheDependencies(file: File) = {
+    cacheTree.put(file.getCanonicalPath, file)
   }
 
-
+//
 //  val owners = Future { Source.fromFile(ReadOnly.OWNERS.toString)(Codec.UTF8).getLines }
 //  val paths = Future { Source.fromFile(ReadOnly.DEPENDENCIES.toString)(Codec.UTF8).getLines }
 //  val transitiveDependencies = ???
@@ -107,7 +132,6 @@ object ValidateApprovals extends App {
 ////  AtomicReference
 //  // process files in parallel to build dependency graph
 ////  val parallel =
-  cacheTree.clear()
 }
 
 object ReadOnly extends Enumeration {
