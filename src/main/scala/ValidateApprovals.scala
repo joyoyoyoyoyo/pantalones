@@ -1,27 +1,16 @@
 
 import java.io.File
-import java.nio.file.{FileSystems, Files, Paths}
-import java.util.concurrent.{Executors, ForkJoinTask, RecursiveTask}
+import java.nio.file.{Files, Paths}
 import java.util.concurrent.atomic.AtomicReference
 
-import ReadOnly.ReadOnly
 import pantalones.ValidatorCLI
 
-import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.Queue
-import scala.collection.mutable
-import scala.collection.parallel.immutable.ParSeq
 import scala.concurrent.ExecutionContext
-import scala.util.{DynamicVariable, Either, Success}
-
-//import scala.collection.parallel.mutable.ParTrieMap
 import scala.concurrent.Future
 import scala.io.{Codec, Source}
-//import java.util.concurrent._
-//import pantalones.common.{DefaultTaskScheduler, TaskScheduler}
-//import java.util.concurrent.RecursiveTask
-
 import java.util.concurrent.ForkJoinPool
+
 import scala.collection.concurrent
 
 object ValidateApprovals extends App {
@@ -36,24 +25,26 @@ object ValidateApprovals extends App {
   val parallelism = Runtime.getRuntime.availableProcessors * 32
   val forkJoinPool = new ForkJoinPool(parallelism)
   val executionContext = ExecutionContext.fromExecutorService(forkJoinPool)
+  val projectPath = new File(".").getCanonicalPath + "/"
 
   // Our persistent data structures
   val cacheTree = concurrent.TrieMap[String, File]()
   val snapshot = cacheTree.snapshot
   val cacheDir = concurrent.TrieMap[String, File]()
   val ownersRepository = concurrent.TrieMap[String, List[String]]()
-  val dependenciesRepository = concurrent.TrieMap[String, String]()
+  val dependenciesRepository = concurrent.TrieMap[String, List[String]]()
 
 
 
 
   val root = new File(".")
   walkTree(root)(executionContext)
-//  traversed
 
 //  cacheTree.keySet.foreach(println)
   ownersRepository.keySet.foreach(println)
-//  val transientDependencies = GraphDAG(dependenciesRepository)
+  dependenciesRepository.keySet.foreach(println)
+
+  //  val transientDependencies = GraphDAG(dependenciesRepository)
 
 
   def parallelTraverse[A, B, C, D](
@@ -101,7 +92,10 @@ object ValidateApprovals extends App {
     cacheTree.put(file.getCanonicalPath, file)
 
   }
-  def cacheDependencies(file: File) = {
+  def cacheDependencies(file: File) = { // normalized the project directory format
+    val dependencies = Source.fromFile(file)(Codec.UTF8).getLines.map(path => s"$projectPath$path").toList
+    dependenciesRepository.update(file.getCanonicalPath, dependencies ::: dependenciesRepository.getOrElse(file.getCanonicalPath,List()))
+    //    dependencies.foreach(dependency =>
     cacheTree.put(file.getCanonicalPath, file)
   }
 
