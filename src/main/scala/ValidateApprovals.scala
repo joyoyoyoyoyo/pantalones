@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicReference
 import ReadOnly.ReadOnly
 
 import scala.collection.concurrent.TrieMap
+import scala.collection.immutable.Queue
 import scala.collection.mutable
 import scala.collection.parallel.immutable.ParSeq
 import scala.concurrent.ExecutionContext
@@ -48,7 +49,8 @@ object CLI {
 
 object ValidateApprovals extends App {
 //  val (targetApprovers, targetFiles) = Future { CLI(args) }
-
+  val approves = List()
+  val changedFiles = List()
 
   // threading and parellism context
   val parallelism = Runtime.getRuntime.availableProcessors * 32
@@ -58,18 +60,14 @@ object ValidateApprovals extends App {
 
   // asynchronously cache files in project repository
   val cacheTree = concurrent.TrieMap[String, File]()
-  cacheTree.clear()
+  val snapshot = cacheTree.snapshot
   val cacheDirectories = concurrent.TrieMap[String, File]()
-  val users = concurrent.TrieMap[String, File]()
+  val owners = List()
+  val dependencies = List()
+  val transitiveDAG = ???
   val root = new File(".")
   walkTree(root)(executionContext)
-  def walkTree(file: File)(implicit ec: ExecutionContext): Iterable[File] = {
-    Future { parallelTraverse(file, cacheFiles, cacheOwners, cacheDependencies, cacheFiles)(ec) }
-    val children = new Iterable[File] {
-      def iterator = if (file.isDirectory) file.listFiles.iterator else Iterator.empty
-    }
-    Seq(file) ++: children.flatMap(walkTree)
-  }
+
 
   cacheTree.keySet.foreach(println)
 
@@ -87,6 +85,13 @@ object ValidateApprovals extends App {
     }
   }
 
+  def walkTree(file: File)(implicit ec: ExecutionContext): Iterable[File] = {
+    Future { parallelTraverse(file, cacheFiles, cacheOwners, cacheDependencies, cacheFiles)(ec) }
+    val children = new Iterable[File] {
+      def iterator = if (file.isDirectory) file.listFiles.iterator else Iterator.empty
+    }
+    Seq(file) ++: children.flatMap(walkTree)
+  }
 
   def cacheDirectories(file: File): Unit = cacheDirectories.put(file.getAbsolutePath, file)
   def cacheFiles(file: File) = cacheTree.put(file.getPath,file)
@@ -126,7 +131,7 @@ object ValidateApprovals extends App {
 ////  AtomicReference
 //  // process files in parallel to build dependency graph
 ////  val parallel =
-
+  cacheTree.clear()
 }
 
 object ReadOnly extends Enumeration {
