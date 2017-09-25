@@ -11,18 +11,18 @@ import scala.collection.concurrent
 import scala.util.{Failure, Success}
 
 object ValidateApprovals extends App {
-  val acceptors, changedFiles = ValidatorCLI.parse(args)
+  val projectPath = new File(".").getCanonicalPath + "/"
+  val arg1, arg2 = ValidatorCLI.parse(args, projectPath)
 
   // Enqueue for managing the tasks
-  val enqueueAccepts = acceptors.value._1.foldLeft(Queue[String]()){ (acc, elem) => acc.enqueue(elem) }
-  val enqueueModified = acceptors.value._2.foldLeft(Queue[String]()){ (acc, elem) => acc.enqueue(elem) }
+  val acceptors = arg1.value._1.toList.foldLeft(Set[String]()){ (acc, elem) => Set(elem) ++ acc }
+  val modifiedFiles = arg2.value._2.toList.foldLeft(Set[String]()){ (acc, elem) => Set(elem) ++ acc }
 
 
   // threading and parellism context
   val parallelism = Runtime.getRuntime.availableProcessors * 32
   val forkJoinPool = new ForkJoinPool(parallelism)
   val executionContext = ExecutionContext.fromExecutorService(forkJoinPool)
-  val projectPath = new File(".").getCanonicalPath + "/"
 
   // Our persistent data structures
   val cacheTree = concurrent.TrieMap[String, File]()
@@ -36,34 +36,13 @@ object ValidateApprovals extends App {
 
   val root = new File(".")
   walkTree(root)(executionContext)
+  val message = approve(acceptors, modifiedFiles)
+  println(message)
 
-  ownersRepository.keySet.foreach(println)
-  dependenciesRepository.keySet.foreach(println)
+  def approve(acceptors: Set[String], changedFiles: Set[String]) = {
 
-  val x = approve(enqueueAccepts,enqueueModified)
-  println(x.value)
-  def approve(acceptors: Queue[String], changedFiles: Queue[String]) = {
+//    approve()
 
-    def recurseOnOwner(currOwner: String, acceptors: Queue[String], changedFiles:Queue[String], cf: String): Success[String] = {
-
-      val owns = ownersRepository.lookup(currOwner)
-      val dependencies = directoryPrivilegesRepo.getOrElse(cf, List())
-      if (dependencies.contains(owns)) Success("Approved")
-      if (acceptors.size == 1 && acceptors.size != 1) {
-        recurseOnOwner(currOwner, acceptors, changedFiles.dequeue._2, changedFiles.dequeue._1)
-      }
-      if (acceptors.size != 1 && changedFiles.size == 1) {
-        recurseOnOwner(acceptors.dequeue._1, acceptors.dequeue._2, changedFiles, cf)
-      }
-      if (acceptors.size != 1 && changedFiles.size!= 1) {
-        recurseOnOwner(acceptors.dequeue._1, acceptors.dequeue._2, changedFiles.dequeue._2, changedFiles.dequeue._1)
-      }
-      else {
-        Success("Insufficient Approvals")
-      }
-    }
-
-    recurseOnOwner(acceptors.dequeue._1, acceptors.dequeue._2, changedFiles.dequeue._2, changedFiles.dequeue._1)
   }
 
 

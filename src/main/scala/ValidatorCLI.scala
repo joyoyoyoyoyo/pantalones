@@ -2,18 +2,22 @@ import scala.util.Success
 
 
 object ValidatorCLI {
-  def parse(args: Array[String]): Success[(Array[String], Array[String])]  = {
+  def parse(args: Array[String], projectPath: String)  = {
     Predef.require(args.length > 0)
     val approversRegex = raw"\\s+--approvers\\s+(.+)\\s+--changed-files".r.pattern
     args.toList match {
       case "--approvers" :: approvalsDelimited :: "--changed-files" :: changedFilesDelimited :: _ => {
-        val approvers = approvalsDelimited.split(",")
-        val changedFiles = changedFilesDelimited.split(",")
+        val approvers = approvalsDelimited.split(",").toList
+        val changedFiles = changedFilesDelimited.split(",").map {
+          file => projectPath + file
+        }.toList
         Success(approvers, changedFiles)
       }
       case "--changed-files" :: changedFilesDelimited :: "--approvers" :: approvalsDelimited :: _ => {
-        val approvers = approvalsDelimited.split(",")
-        val changedFiles = changedFilesDelimited.split(",")
+        val approvers = approvalsDelimited.split(",").toList
+        val changedFiles = changedFilesDelimited.split(",").map {
+          file => projectPath + file
+        }.toList
         Success(approvers, changedFiles)
       }
     }
