@@ -8,6 +8,7 @@ import scala.io.{Codec, Source}
 import java.util.concurrent.ForkJoinPool
 
 import scala.collection.concurrent
+import scala.collection.concurrent.TrieMap
 import scala.util.{Failure, Success}
 
 object ValidateApprovals extends App {
@@ -15,8 +16,12 @@ object ValidateApprovals extends App {
   val arg1, arg2 = ValidatorCLI.parse(args, projectPath)
 
   // Enqueue for managing the tasks
-  val acceptors = arg1.value._1.toList.foldLeft(Set[String]()){ (acc, elem) => Set(elem) ++ acc }
-  val modifiedFiles = arg2.value._2.toList.foldLeft(Set[String]()){ (acc, elem) => Set(elem) ++ acc }
+//  val modifiedFiles = arg2.value._2.toList.foldLeft(Set[String]()){ (acc, elem) => Set(elem) ++ acc }
+
+  val acceptors =
+  arg1.value._1.foldLeft(List[String]()){ (acc, elem) => elem :: acc }
+  val modifiedFiles =
+    arg2.value._2.foldLeft(List[String]()){ (acc, elem) => elem :: acc }
 
 
   // threading and parellism context
@@ -26,6 +31,9 @@ object ValidateApprovals extends App {
 
   // Our persistent data structures
   val cacheTree = concurrent.TrieMap[String, File]()
+  // on a read, we determine a directories dependencies
+  val localPathToDependents = concurrent.TrieMap[String, List[String]]()
+  val localPathToAuthorizers = concurrent.TrieMap[String, List[String]]()
   val snapshot = cacheTree.snapshot
   val cacheDir = concurrent.TrieMap[String, File]()
   val ownersRepository = concurrent.TrieMap[String, List[String]]()
@@ -36,12 +44,12 @@ object ValidateApprovals extends App {
 
   val root = new File(".")
   walkTree(root)(executionContext)
-  val message = approve(acceptors, modifiedFiles)
-  println(message)
-
+//  val message = approve(acceptors, modifiedFiles)
+//  println(message)
+  localPathToAuthorizers.foreach(println)
   def approve(acceptors: Set[String], changedFiles: Set[String]) = {
 
-//    approve()
+
 
   }
 
@@ -50,8 +58,7 @@ object ValidateApprovals extends App {
         localFile: File,
         cacheDirectories: File => Unit,
         cacheOwners: File => Unit,
-        cacheDependencies: File => Unit,
-        cacheFiles: File => Unit) (implicit ec: ExecutionContext): Future[Unit] = {
+        cacheDependencies: File => Unit) (implicit ec: ExecutionContext): Future[Unit] = {
     localFile match {
       case directories if directories.isDirectory => { Future.successful(cacheDirectories(directories)) }
       case owners if owners.getName.endsWith(ReadOnly.OWNERS.toString) => { Future.successful(cacheOwners(owners)) }
@@ -60,7 +67,7 @@ object ValidateApprovals extends App {
   }
 
   def walkTree(file: File)(implicit ec: ExecutionContext): Iterable[File] = {
-    Future { parallelTraverse(file, cacheDirectories, cacheOwners, cacheDependencies, cacheFiles)(ec) }
+    Future { parallelTraverse(file, cacheDirectories, cacheOwners, cacheDependencies)(ec) }
     val children = new Iterable[File] {
       def iterator = if (file.isDirectory) file.listFiles.iterator else Iterator.empty
     }
@@ -68,28 +75,31 @@ object ValidateApprovals extends App {
   }
 
   // asynchronously cache files in project repository
-  def cacheDirectories(file: File) = {
+  def cacheDirectories(file: File)(implicit ec: ExecutionContext) = {
     cacheTree.put(file.getCanonicalPath, file)
   }
   def cacheFiles(file: File) = {
     cacheTree.put(file.getCanonicalPath, file)
   }
-  def cacheOwners(file: File) = {
-    val owners = Source.fromFile(file)(Codec.UTF8).getLines.toTraversable
-
-    owners.foreach( user =>
-      ownersRepository.update(user, file.getCanonicalPath :: ownersRepository.getOrElse(user,List()) ))
-
-    val directoryPrivileges = owners.toList
-    directoryPrivilegesRepo.update(file.getCanonicalPath, directoryPrivileges ::: directoryPrivilegesRepo.getOrElse(file.getCanonicalPath,List()))
-
-    cacheTree.put(file.getCanonicalPath, file)
-
+  def cacheOwners(file: File)(implicit ec: ExecutionContext) = {
+    val owners = { Future.successful(Source.fromFile(file)(Codec.UTF8).getLines.toList) }
+    owners.onComplete {
+      case Success(authorizedFiles) => {
+        val uniqueUsers = localPathToAuthorizers.getOrElse(file.getCanonicalPath, List[String]()) ::: authorizedFiles
+        localPathToAuthorizers.put(file.getCanonicalPath, uniqueUsers)
+      }
+    }
   }
-  def cacheDependencies(file: File) = { // normalized the project directory format
-    val dependencies = Source.fromFile(file)(Codec.UTF8).getLines.map(path => s"$projectPath$path").toList
-    dependenciesRepository.update(file.getCanonicalPath, dependencies ::: dependenciesRepository.getOrElse(file.getCanonicalPath,List()))
-    cacheTree.put(file.getCanonicalPath, file)
+  def cacheDependencies(file: File)(implicit ec: ExecutionContext) = { // normalized the project directory format
+    val dependencies = { Future.successful(Source.fromFile(file)(Codec.UTF8).getLines.map(path => s"$projectPath$path").toList) }
+    //dependenciesRepository.update(file.getCanonicalPath, dependencies. dependenciesRepository.getOrElse(file.getCanonicalPath,List()))
+//    if (localPathToAuthorizers.groupBy(identity).toList)
+    dependencies.onComplete {
+      case Success(list) => {
+        val canonicalDependency = localPathToDependents.getOrElse(file.getCanonicalPath, List[String]()) ::: list
+        localPathToDependents.put(file.getCanonicalPath, canonicalDependency)
+      }
+    }
   }
 
 }
