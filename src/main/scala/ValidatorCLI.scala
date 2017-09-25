@@ -1,10 +1,9 @@
-package pantalones
-
-import scala.util.{Failure, Success}
+import scala.util.Success
 
 
 object ValidatorCLI {
   def parse(args: Array[String]): Success[(Array[String], Array[String])]  = {
+    Predef.require(args.length > 0)
     val approversRegex = raw"\\s+--approvers\\s+(.+)\\s+--changed-files".r.pattern
     args.toList match {
       case "--approvers" :: approvalsDelimited :: "--changed-files" :: changedFilesDelimited :: _ => {
