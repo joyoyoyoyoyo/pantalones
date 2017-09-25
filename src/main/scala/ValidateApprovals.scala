@@ -51,7 +51,8 @@ object ValidateApprovals extends App {
   walkTree(root)(executionContext)
 //  traversed
 
-  cacheTree.keySet.foreach(println)
+//  cacheTree.keySet.foreach(println)
+  ownersRepository.keySet.foreach(println)
 //  val transientDependencies = GraphDAG(dependenciesRepository)
 
 
@@ -86,14 +87,17 @@ object ValidateApprovals extends App {
     cacheTree.put(file.getCanonicalPath, file)
   }
   def cacheOwners(file: File) = {
-//    val owners = Source.fromFile(ReadOnly.OWNERS.toString)(Codec.UTF8).getLines.toList
-//    val paths = Source.fromFile(ReadOnly.DEPENDENCIES.toString)(Codec.UTF8).getLines.toList
+    val owners = Source.fromFile(file)(Codec.UTF8).getLines.toTraversable
+    owners.foreach( user =>
+      ownersRepository.update(user, file.getCanonicalPath :: ownersRepository.getOrElse(user,List()) ))
+//    val paths = Source.fromFile(file)(Codec.UTF8).getLines.toList
 //
 ////    val owners = Source.fromFile(file)(Codec.UTF8).getLines
 ////    owners.foldLeft(0 until owners.length){ (acc, username) =>
 ////      ownersRepository.put(username, file.getCanonicalPath :: ownersRepository.getOrElse(username, List()))
 ////      acc
 //    }
+
     cacheTree.put(file.getCanonicalPath, file)
 
   }
