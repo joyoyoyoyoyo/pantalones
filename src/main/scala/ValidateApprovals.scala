@@ -1,7 +1,7 @@
 
 import java.io.File
 import java.nio.file.{FileSystems, Files, Paths}
-import java.util.concurrent.{ForkJoinTask, RecursiveTask}
+import java.util.concurrent.{Executors, ForkJoinTask, RecursiveTask}
 import java.util.concurrent.atomic.AtomicReference
 
 import ReadOnly.ReadOnly
@@ -9,6 +9,7 @@ import ReadOnly.ReadOnly
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.parallel.immutable.ParSeq
+import scala.concurrent.ExecutionContext
 import scala.util.{DynamicVariable, Success}
 
 //import scala.collection.parallel.mutable.ParTrieMap
@@ -46,15 +47,15 @@ object CLI {
 
 
 object ValidateApprovals extends App {
-  val (targetApprovers, targetFiles) = Future { CLI(args) }
+//  val (targetApprovers, targetFiles) = Future { CLI(args) }
 
 
   // threading and parellism context
   val parallelism = Runtime.getRuntime.availableProcessors * 32
-  val forkJoinPool = new ForkJoinPool(parallelism)
+//  val forkJoinPool = new concurrent.ForkJoinPool(parallelism)
   import collection.parallel.ParMap
-//  val executorService = Executors.newFixedThreadPool(forkJoinPool)
-//  val executionContext = ExecutionContext.fromExecutorService(executorService)
+  val executorService = Executors.newFixedThreadPool(parallelism)
+  val executionContext = ExecutionContext.fromExecutorService(executorService)
 
 
 
@@ -67,20 +68,43 @@ object ValidateApprovals extends App {
 //  val transitiveDependencies = ???
 
   def cacheDirectories(file: File) = cacheTree.put(file.getAbsolutePath, file)
-  def cacheFiles(file: File) = cacheTree.put(file.getAbsolutePath, file)
+  def cacheFiles(file: File) = println(file.getName)
   def cacheOwners(file: File) = cacheTree.put(file.getAbsolutePath, file)
   def cacheDependencies(file: File) = cacheTree.put(file.getAbsolutePath, file)
 
+  val root = new File(".")
+//  val root = Node(path=".", rootFile.listFiles.toList)
 
+  val x = walkTree(root)
+  println(x)
 
-  def parallelTraverse[A, B, C, D](dir: File, taskA: A => (), taskB: B => (), taskC: C => (), taskD: D => ()) = {
+  def walkTree(file: File): Iterable[File] = {
+    parallelTraverse(file, cacheFiles, cacheFiles, cacheFiles, cacheFiles)(executionContext)
+    val children = new Iterable[File] {
+      def iterator = if (file.isDirectory) file.listFiles.iterator else Iterator.empty
+    }
+    Seq(file) ++: children.flatMap(walkTree)
+  }
+
+  def parallelTraverse[A, B, C, D](dir: File, taskA: File => Unit, taskB: File => Unit, taskC: File => Unit, taskD: File => Unit)
+                                  (implicit ec: ExecutionContext): Future[Unit] = {
     // parallel operations
-    dir.listFiles.toList.par.map {
-      case directories if directories.isDirectory => Future(taskA(directories))
-      case files if files.isFile => Future(taskB(files))
-      case owners if owners.getName.endsWith(ReadOnly.OWNERS.toString) => Future(taskC(owners))
-      case dependencies if dependencies.getName.endsWith(ReadOnly.DEPENDENCIES.toString) => Future(taskD(dependencies))
-    } foreach { _}
+//    FileSystems.getDefault.getPath(root).
+    dir match {
+      case directories if directories.isDirectory => {
+        Future.successful(taskA(directories))
+      }
+      case files if files.isFile => {
+        Future.successful(taskB(files))
+      }
+      case owners if owners.getName.endsWith(ReadOnly.OWNERS.toString) => {
+        Future.successful(taskC(owners))
+      }
+      case dependencies if dependencies.getName.endsWith(ReadOnly.DEPENDENCIES.toString) => {
+        Future.successful(taskD(dependencies))
+      }
+    }
+//    Seq(dir) ++: children.flatMap(parallelTraverse(_))
   }
 
 
@@ -88,99 +112,99 @@ object ValidateApprovals extends App {
 
 
 
-
-
-  def getDir() = 1
-  def getFiles() = 1
-  def getOwners() = 1
-  def getDependencies() = 1
-
-  val root = Paths.get(".")
-//  val cache = parallelTraverse[Int,Int,Int,Int](root, getDir,getFiles, getOwners, getDependencies)
-//    { (acc,file) => if (file.isDirectory) taskA else taskB  }
-
-
+//
+//
+//  def getDir() = 1
+//  def getFiles() = 1
+//  def getOwners() = 1
+//  def getDependencies() = 1
+//
+//  val root = Paths.get(".")
+////  val cache = parallelTraverse[Int,Int,Int,Int](root, getDir,getFiles, getOwners, getDependencies)
+////    { (acc,file) => if (file.isDirectory) taskA else taskB  }
+//
+//
   case class Node(path: String, sub: List[Node])
-
-//  val root = new File(".")  // enables foreach
-
-  //  val dir = FileSystems.getDefault.getPath(".")
-//  val root = FileSystems.getDefault.getPath(".")
-//  Files.walk(root).iterator.asScala
-//  Files.list(Paths.get(".")).flatMap {
-//    path => {
-//      path.toFile.is
+//
+////  val root = new File(".")  // enables foreach
+//
+//  //  val dir = FileSystems.getDefault.getPath(".")
+////  val root = FileSystems.getDefault.getPath(".")
+////  Files.walk(root).iterator.asScala
+////  Files.list(Paths.get(".")).flatMap {
+////    path => {
+////      path.toFile.is
+////    }
+////  }
+//  val transitive = concurrent.TrieMap[String, String]()
+//
+////  def traverseDirectory(file: File) = {
+////    val root = FileSystems.getDefault.getPath(".")
+////    //    val root.p
+//////    Fales.walk(root).
+////    Files.walk(root).map(
+////
+////      currentFile => {
+////        currentFile.toFile match {
+////          case dir if dir.isDirectory => {
+////            val parent = dir.getParentFile.getAbsolutePath
+//////            val
+////            //          val directoryInfo = Future {  }
+////          }
+////          case localFile => {
+////
+////          }
+////
+////        }
+////      }
+////    )
+////  }
+//
+//
+//
+//
+//  def traverseDirectory(file: File): Node = {
+//    val (directories, files) = file.listFiles.toList.partition(_.isDirectory)
+//    val (owners) = files.filter(ls => ls.getName.contains(ReadOnly.values))
+//    val depedencies = files.filter(ls => ls.getName.endsWith(ReadOnly.DEPENDENCIES.toString))
+////        .withFilter(ls => ls.)
+////          .
+////            .|| ReadOnly.DEPENDENCIES.toString))
+////        .partition(local => local.getName.equals(ReadOnly.OWNERS.toString))
+//    directories
+//    if(directories.isEmpty) {
+//      Node(file.getAbsolutePath, files.map((file: File )=> Node(file.getAbsolutePath, List.empty[Node])))
+//    } else {
+//      Node(file.getAbsolutePath, directories.map(directory => traverseDirectory(directory)))
 //    }
 //  }
-  val transitive = concurrent.TrieMap[String, String]()
-
-//  def traverseDirectory(file: File) = {
-//    val root = FileSystems.getDefault.getPath(".")
-//    //    val root.p
-////    Fales.walk(root).
-//    Files.walk(root).map(
+////  traverseDirectory(root)
 //
-//      currentFile => {
-//        currentFile.toFile match {
-//          case dir if dir.isDirectory => {
-//            val parent = dir.getParentFile.getAbsolutePath
-////            val
-//            //          val directoryInfo = Future {  }
-//          }
-//          case localFile => {
+//  val localSnapshot = cache.snapshot
 //
-//          }
+//  val transitiveSnapshot = cache.snapshot()
 //
-//        }
-//      }
-//    )
+//  val approvals = Future {
+//    args match {
+////      case cache.
+//    }
 //  }
-
-
-
-
-  def traverseDirectory(file: File): Node = {
-    val (directories, files) = file.listFiles.toList.partition(_.isDirectory)
-    val (owners) = files.filter(ls => ls.getName.contains(ReadOnly.values))
-    val depedencies = files.filter(ls => ls.getName.endsWith(ReadOnly.DEPENDENCIES.toString))
-//        .withFilter(ls => ls.)
-//          .
-//            .|| ReadOnly.DEPENDENCIES.toString))
-//        .partition(local => local.getName.equals(ReadOnly.OWNERS.toString))
-    directories
-    if(directories.isEmpty) {
-      Node(file.getAbsolutePath, files.map((file: File )=> Node(file.getAbsolutePath, List.empty[Node])))
-    } else {
-      Node(file.getAbsolutePath, directories.map(directory => traverseDirectory(directory)))
-    }
-  }
-//  traverseDirectory(root)
-
-  val localSnapshot = cache.snapshot
-
-  val transitiveSnapshot = cache.snapshot()
-
-  val approvals = Future {
-    args match {
-//      case cache.
-    }
-  }
-
-  val changedFiles = Future {
-    Success(cache.get(""))
-  }
-
-  val directoryies = approvals
-//  def directories = Future { }
-
-  //
-//  val dependenceyGraph =
-
-//  val owner = AtomicReference[FileEvent](FileCreated("."))
 //
-//  AtomicReference
-  // process files in parallel to build dependency graph
-//  val parallel =
+//  val changedFiles = Future {
+//    Success(cache.get(""))
+//  }
+//
+//  val directoryies = approvals
+////  def directories = Future { }
+//
+//  //
+////  val dependenceyGraph =
+//
+////  val owner = AtomicReference[FileEvent](FileCreated("."))
+////
+////  AtomicReference
+//  // process files in parallel to build dependency graph
+////  val parallel =
 
 }
 
@@ -188,14 +212,14 @@ object ReadOnly extends Enumeration {
   type ReadOnly = Value
   val OWNERS, DEPENDENCIES = Value
 }
+//
+//def traverseFiles(patterns: ReadOnly) = {
+//
+//}
 
-def traverseFiles(patterns: ReadOnly) = {
-
-}
-
-def cache() = {
-
-}
+//def cache() = {
+//
+//}
 
 
 
