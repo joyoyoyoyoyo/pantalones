@@ -93,7 +93,7 @@ object ValidateApprovals extends App {
     Seq(file) ++: children.flatMap(walkTree)
   }
 
-  def cacheDirectories(file: File): Unit = cacheDirectories.put(file.getAbsolutePath, file)
+  def cacheDirectories(file: File) = cacheDirectories.put(file.getAbsolutePath, file)
   def cacheFiles(file: File) = cacheTree.put(file.getPath,file)
   def cacheOwners(file: File) = cacheTree.put(file.getPath,file)
   def cacheDependencies(file: File) = { cacheTree.put(file.getAbsolutePath, file)
