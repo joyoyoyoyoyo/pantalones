@@ -1,18 +1,16 @@
 
 import java.io.File
-import java.nio.file.{Files, Paths}
+import java.nio.file.{FileSystems, Files, Paths}
 import java.util.concurrent.atomic.AtomicReference
 
 import ReadOnly.ReadOnly
-import sun.tools.jar.CommandLine
 
-import scala.collection.parallel
+import scala.collection.concurrent.TrieMap
 import scala.util.Success
 
 //import scala.collection.parallel.mutable.ParTrieMap
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.io.{Codec, Source}
-import scala.collection.immutable.Queue
 //import java.util.concurrent._
 //import pantalones.common.{DefaultTaskScheduler, TaskScheduler}
 //import java.util.concurrent.RecursiveTask
@@ -20,7 +18,6 @@ import scala.collection.immutable.Queue
 import java.util.concurrent.ForkJoinPool
 
 import scala.collection.concurrent
-import scala.util.DynamicVariable
 
 case class CLI(
   changedFiles: List[String],
@@ -52,21 +49,88 @@ object ValidateApprovals extends App {
   // threading and parellism context
   val parallelism = Runtime.getRuntime.availableProcessors * 32
   val forkJoinPool = new ForkJoinPool(parallelism)
+  import collection.parallel.ParMap
+//  val executorService = Executors.newFixedThreadPool(forkJoinPool)
+//  val executionContext = ExecutionContext.fromExecutorService(executorService)
 
   import scala.concurrent._
-  import scala.concurrent.duration._
   import ExecutionContext.Implicits._
 
   // asynchronously cache files in project repository
   val cache = concurrent.TrieMap[String,String]()
-  val owners = Future { Source.fromFile(ReadOnly.OWNERS.toString)(Codec.UTF8).getLines }
-  val paths = Future { Source.fromFile(ReadOnly.DEPENDENCIES.toString)(Codec.UTF8).getLines }
-  val transitiveDependencies = ???
 
-  def findCanonicalFiles(files: Future[Iterable[String]]) = {
-    val root = Paths.get(".").iterator()
-    root.next().
+//  def traverse
+//  val owners = Future { Source.fromFile(ReadOnly.OWNERS.toString)(Codec.UTF8).getLines }
+//  val paths = Future { Source.fromFile(ReadOnly.DEPENDENCIES.toString)(Codec.UTF8).getLines }
+//  val transitiveDependencies = ???
+
+  @scala.annotation.tailrec
+  def traverse(dir: File, taskA: () => Unit): Unit =
+    // parallel operations
+    dir.listFiles.par {
+      case directories if directories.isDirectory => taskA { }
+      case files if files.isFile => files
+      case owners if owners.getName.endsWith("OWNERS") => owners
+      case dependencies if dependencies.getName.endsWith("DEPENDENCIES") => dependencies
+    }
+    { (acc,file) => if (file.isDirectory) taskA else taskB  }
+
+
+  case class Node(path: String, sub: List[Node])
+
+//  val root = new File(".")  // enables foreach
+
+  //  val dir = FileSystems.getDefault.getPath(".")
+//  val root = FileSystems.getDefault.getPath(".")
+//  Files.walk(root).iterator.asScala
+//  Files.list(Paths.get(".")).flatMap {
+//    path => {
+//      path.toFile.is
+//    }
+//  }
+  val transitive = concurrent.TrieMap[String, String]()
+
+//  def traverseDirectory(file: File) = {
+//    val root = FileSystems.getDefault.getPath(".")
+//    //    val root.p
+////    Fales.walk(root).
+//    Files.walk(root).map(
+//
+//      currentFile => {
+//        currentFile.toFile match {
+//          case dir if dir.isDirectory => {
+//            val parent = dir.getParentFile.getAbsolutePath
+////            val
+//            //          val directoryInfo = Future {  }
+//          }
+//          case localFile => {
+//
+//          }
+//
+//        }
+//      }
+//    )
+//  }
+
+
+
+
+  def traverseDirectory(file: File): Node = {
+    val (directories, files) = file.listFiles.toList.partition(_.isDirectory)
+    val (owners) = files.filter(ls => ls.getName.contains(ReadOnly.values))
+    val depedencies = files.filter(ls => ls.getName.endsWith(ReadOnly.DEPENDENCIES.toString))
+//        .withFilter(ls => ls.)
+//          .
+//            .|| ReadOnly.DEPENDENCIES.toString))
+//        .partition(local => local.getName.equals(ReadOnly.OWNERS.toString))
+    directories
+    if(directories.isEmpty) {
+      Node(file.getAbsolutePath, files.map((file: File )=> Node(file.getAbsolutePath, List.empty[Node])))
+    } else {
+      Node(file.getAbsolutePath, directories.map(directory => traverseDirectory(directory)))
+    }
   }
+//  traverseDirectory(root)
 
   val localSnapshot = cache.snapshot
 
