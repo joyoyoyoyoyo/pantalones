@@ -5,13 +5,14 @@ import java.util.concurrent.{Executors, ForkJoinTask, RecursiveTask}
 import java.util.concurrent.atomic.AtomicReference
 
 import ReadOnly.ReadOnly
+import pantalones.ValidatorCLI
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.Queue
 import scala.collection.mutable
 import scala.collection.parallel.immutable.ParSeq
 import scala.concurrent.ExecutionContext
-import scala.util.{DynamicVariable, Success}
+import scala.util.{DynamicVariable, Either, Success}
 
 //import scala.collection.parallel.mutable.ParTrieMap
 import scala.concurrent.Future
@@ -21,31 +22,20 @@ import scala.io.{Codec, Source}
 //import java.util.concurrent.RecursiveTask
 
 import java.util.concurrent.ForkJoinPool
-
 import scala.collection.concurrent
 
-//val validate = "call\s+((?:[\d]{3}\.[\d].[\d].[\d])|[a-zA-Z.]+)\s+([\d]{4})".r
-val approversRegex = "\s+--approvers\s+(.+)\s+--changed-files\s+(.+)".r
-
 object ValidateApprovals extends App {
-//  val (targetApprovers, targetFiles) = Future { CLI(args) }
-//  val patten = s\w+(${approvers.regex}|${changedFiles.regex})\w+""".r
+  val acceptors, changedFiles = ValidatorCLI.parse(args)
 
-  val context = args map {
-    case approversRegex(approvers, changedFiles) => {
-      println(approvers)
-      println(changedFiles)
-    }
-    case _ => println("Win")
-  }
-//  val approves = List()
-//  val changedFiles = List()
+  // Enqueue for managing the tasks
+  val enqueueAccepts = acceptors.value._1.foldLeft(Queue[String]()){ (acc, elem) => acc.enqueue(elem) }
+  val enqueueModified = acceptors.value._2.foldLeft(Queue[String]()){ (acc, elem) => acc.enqueue(elem) }
+
 
   // threading and parellism context
   val parallelism = Runtime.getRuntime.availableProcessors * 32
   val forkJoinPool = new ForkJoinPool(parallelism)
   val executionContext = ExecutionContext.fromExecutorService(forkJoinPool)
-  //val executorService = Executors.newFixedThreadPool(parallelism)
 
   // asynchronously cache files in project repository
   val cacheTree = concurrent.TrieMap[String, File]()
@@ -55,8 +45,6 @@ object ValidateApprovals extends App {
   val dependencies = List()
   val root = new File(".")
   walkTree(root)(executionContext)
-
-
   cacheTree.keySet.foreach(println)
 
   def parallelTraverse[A, B, C, D](
@@ -81,7 +69,7 @@ object ValidateApprovals extends App {
     Seq(file) ++: children.flatMap(walkTree)
   }
 
-  def cacheDirectories(file: File) = cacheDirectories.put(file.getAbsolutePath, file)
+  def cacheDirectories(file: File) = cacheTree.put(file.getAbsolutePath, file)
   def cacheFiles(file: File) = cacheTree.put(file.getPath,file)
   def cacheOwners(file: File) = cacheTree.put(file.getPath,file)
   def cacheDependencies(file: File) = { cacheTree.put(file.getAbsolutePath, file)
