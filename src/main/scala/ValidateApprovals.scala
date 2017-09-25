@@ -24,33 +24,22 @@ import java.util.concurrent.ForkJoinPool
 
 import scala.collection.concurrent
 
-case class CLI(
-  changedFiles: List[String],
-  approvers: List[String]) {
-
-  def parse(args: Seq[String]
-
-         ): (List[String], List[String]) = {
-    (approvers, changedFiles)
-//    args match {
-//      case "--usage" => ???
-//      case "--approvals" => ???
-//    }
-//    this
-  }
-}
-
-object CLI {
-  def apply(that: Array[String]) = {
-    new CLI(List("Bob", "Jenny"), List("Bob", "Jenny"))
-  }
-}
-
+//val validate = "call\s+((?:[\d]{3}\.[\d].[\d].[\d])|[a-zA-Z.]+)\s+([\d]{4})".r
+val approversRegex = "\s+--approvers\s+(.+)\s+--changed-files\s+(.+)".r
 
 object ValidateApprovals extends App {
 //  val (targetApprovers, targetFiles) = Future { CLI(args) }
-  val approves = List()
-  val changedFiles = List()
+//  val patten = s\w+(${approvers.regex}|${changedFiles.regex})\w+""".r
+
+  val context = args map {
+    case approversRegex(approvers, changedFiles) => {
+      println(approvers)
+      println(changedFiles)
+    }
+    case _ => println("Win")
+  }
+//  val approves = List()
+//  val changedFiles = List()
 
   // threading and parellism context
   val parallelism = Runtime.getRuntime.availableProcessors * 32
@@ -64,7 +53,6 @@ object ValidateApprovals extends App {
   val cacheDirectories = concurrent.TrieMap[String, File]()
   val owners = List()
   val dependencies = List()
-  val transitiveDAG = ???
   val root = new File(".")
   walkTree(root)(executionContext)
 
