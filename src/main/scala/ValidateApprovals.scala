@@ -46,7 +46,7 @@ object ValidateApprovals extends App {
     }
     else
       edgesAcc
-  }
+  }.distinct
 
   //    if (destination.nonEmpty) {
 //      destination.foreach { e2 =>
