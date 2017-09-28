@@ -14,11 +14,13 @@
 //final case class DependencyGraph[Edge[A, B] <: Node[T], +T](nodes: Set[T], edges: Set[Edge]) extends Node [T]{
 //  val nodes
 //}
-
+object Digraph {
+  def apply[A](vertices: List[A], edges: List[(A, A)]): Digraph[A] = new Digraph(vertices, edges)
+}
 
 final case class Digraph[A](vertices: List[A], edges: List[(A, A)]) {
   def appendVertex(vertex: A): Digraph[A] = Digraph(vertex :: this.vertices, this.edges)
-  def append(edge: (A, A)): Digraph[A] = Digraph(this.vertices, edge :: this.edges)
+  def appendEdge(edge: (A, A)): Digraph[A] = Digraph(this.vertices, edge :: this.edges)
 
   def adjacent(vertex: A): List[A] = {
     for((v1, v2) <- edges; if vertex == v1) yield v2
@@ -34,11 +36,7 @@ final case class Digraph[A](vertices: List[A], edges: List[(A, A)]) {
   }
 }
 
-object Digraph {
-  def apply[A](vertices: List[A], edges: List[(A, A)]): Digraph[A] = new Digraph(vertices, edges)
 
-  def apply[A](vertices: List[A], edges: List[(A, A)]): Digraph[A] = new Digraph(vertices, for ( (a,b) <- edges ) yield (a, b))
-}
 
 //  lazy val edges =
 

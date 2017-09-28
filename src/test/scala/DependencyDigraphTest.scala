@@ -5,7 +5,6 @@
   * Node("message"->"user")
   *
   * Node("follow"->"user)
-  * Node("user")
   *
   * Node("tweet"->"follow")
   * Node("tweet"->"user")
@@ -20,7 +19,28 @@ import org.scalatest._
 
 class DependencyDigraphTest extends FlatSpec {
 
-  "./src/com/twitter/message" should "depend on ./src/com/twitter/{follow, user}" in {
+  val nodes = List(
+    "./src/com/twitter/message",
+    "./src/com/twitter/follow",
+    "./src/com/twitter/user",
+    "./src/com/twitter/tweet"
+  )
 
+  val edges = List(
+    ("./src/com/twitter/message", "./src/com/twitter/follow"),
+    ("./src/com/twitter/message", "././src/com/twitter/user"),
+    ("./src/com/twitter/follow", "./src/com/twitter/user"),
+    ("./src/com/twitter/user", ""),
+    ("./src/com/twitter/tweet", "./src/com/twitter/follow"),
+    ("./src/com/twitter/tweet", "./src/com/twitter/user")
+  )
+
+
+  val dependencies = Digraph[String](nodes, edges)
+
+
+  "./src/com/twitter/message" should "depend on ./src/com/twitter/{follow, user}" in {
+    val x = dependencies.dfs("./src/com/twitter/message")
+    println(x)
   }
 }
