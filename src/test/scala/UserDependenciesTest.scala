@@ -1,24 +1,8 @@
-/**
-  * Dependencies graph generated from DEPENDENCIES files
-  *
-  * Node("message"->"follow")
-  * Node("message"->"user")
-  *
-  * Node("follow"->"user)
-  *
-  * Node("tweet"->"follow")
-  * Node("tweet"->"user")
-  *
-  * Node("user")
-  *
-  * [message>follow, message->user, user, follow->user, tweet->follow, tweet->user]
-  */
-
 import org.scalatest._
 
+import scala.collection.concurrent
 
-class DependencyDigraphTest extends FlatSpec {
-
+class UserDependenciesTest extends FlatSpec{
   val PATH = "./src/com/twitter/"
 
   val nodes = Set(
@@ -27,6 +11,7 @@ class DependencyDigraphTest extends FlatSpec {
     "./src/com/twitter/user",
     "./src/com/twitter/tweet",
   )
+  val authorizers = concurrent.TrieMap[String, Set[String]]()
 
   val edges = Set(
     ("./src/com/twitter/message", "./src/com/twitter/follow"),
@@ -37,17 +22,11 @@ class DependencyDigraphTest extends FlatSpec {
   )
   val dependencies: Digraph[String] = Digraph[String](nodes, edges)
 
-  /**
-    * At least one approver is required, if the changed file is owned by one of them
-    **/
-  val providedRuntime = Array("--approvers", "alovelace,ghopper",
-    "--changed-files", "src/com/twitter/follow/Follow.java,src/com/twitter/user/User.java")
-
-
-  "./src/com/twitter/message" should "depend on ./src/com/twitter/{follow, user}" in {
+  "./src/com/twitter/message" should "contain owners eclarke and kantonelli" in {
+    val owners = Set("eclarke", "kantonelli")
     val messageDep = dependencies.dfs("./src/com/twitter/message")
     val expected = Set("./src/com/twitter/user", "./src/com/twitter/follow", "./src/com/twitter/message")
     assert (messageDep == expected)
-  }
 
+  }
 }

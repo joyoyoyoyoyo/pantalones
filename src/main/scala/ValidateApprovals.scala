@@ -29,41 +29,6 @@ object ValidateApprovals extends App {
 
   val root = new File(".")
   walkTree(root)(executionContext)
-  val dirEdges = localPathToDependents.keys.foldLeft(Set.empty[(String, String)]) { (edgesAcc,e1) =>
-    val destination = localPathToDependents.getOrElse(e1, Set())
-    if (destination.nonEmpty) { edgesAcc ++ destination.map((e1,_)) } else edgesAcc
-  }
-  val dirNodes = localPathToDependents.keys.toSet
-  val dependencyGraph: Digraph[String] = new Digraph(dirNodes, dirEdges)
-
-  val userDependencies = localPathToAuthorizers.keys.foldLeft(Set.empty[(String,String)]) { (edgesAcc,e1: String) =>
-    val users: List[String] = localPathToAuthorizers.getOrElse(e1, List.empty[String])
-    if (users.nonEmpty) { edgesAcc ++ users.flatMap(user => Set[(String, String)]((e1 ,user))) } else edgesAcc }
-  val userNodes = localPathToAuthorizers.keys.toSet
-  val userDigraph: Digraph[String] = new Digraph(userNodes, userDependencies)
-
-
-  // Acceptance Check
-  val validationMap = Map[String, Boolean]().withDefaultValue(false)
-  acceptors.foreach { proposedAcceptor => {
-      modifiedFiles.foreach { file =>
-        val directory = java.nio.file.Paths.get(modifiedFiles.head).getParent.toString
-        val dependencies = dependencyGraph.dfs(directory)
-        dependencies.foreach { dep =>
-          val users = localPathToAuthorizers.getOrElse(dep.toString, Nil)
-          if (users.contains(proposedAcceptor))
-            validationMap.updated(proposedAcceptor, true)
-        }
-      }
-    }
-  }
-
-  if(validationMap.values.count(_ == false) == 0)
-    println("Accepted")
-  else
-    println("Insufficient approvals")
-
-
 
   def parallelTraverse[A, B, C, D](
         localFile: File,
@@ -142,6 +107,47 @@ object ValidateApprovals extends App {
       }
     }
   }
+
+
+  /***
+    * Build Dependency Graphs
+    */
+  val dirEdges = localPathToDependents.keys.foldLeft(Set.empty[(String, String)]) { (edgesAcc,e1) =>
+    val destination = localPathToDependents.getOrElse(e1, Set())
+    if (destination.nonEmpty) { edgesAcc ++ destination.map((e1,_)) } else edgesAcc
+  }
+  val dirNodes = localPathToDependents.keys.toSet
+  val dependencyGraph: Digraph[String] = new Digraph(dirNodes, dirEdges)
+
+  val userDependencies = localPathToAuthorizers.keys.foldLeft(Set.empty[(String,String)]) { (edgesAcc,e1: String) =>
+    val users: List[String] = localPathToAuthorizers.getOrElse(e1, List.empty[String])
+    if (users.nonEmpty) { edgesAcc ++ users.flatMap(user => Set[(String, String)]((e1 ,user))) } else edgesAcc }
+  val userNodes = localPathToAuthorizers.keys.toSet
+  val userDigraph: Digraph[String] = new Digraph(userNodes, userDependencies)
+
+
+  // Acceptance Check
+  val validationMap = Map[String, Boolean]().withDefaultValue(false)
+  acceptors.foreach { proposedAcceptor => {
+    modifiedFiles.foreach { file =>
+      val directory = java.nio.file.Paths.get(modifiedFiles.head).getParent.toString
+      val dependencies = dependencyGraph.dfs(directory)
+      dependencies.foreach { dep =>
+        val users = localPathToAuthorizers.getOrElse(dep.toString, Nil)
+        if (users.contains(proposedAcceptor))
+          validationMap.updated(proposedAcceptor, true)
+      }
+    }
+  }
+  }
+
+  if(validationMap.values.count(_ == false) == 0)
+    println("Accepted")
+  else
+    println("Insufficient approvals")
+
+
+
 
 }
 
