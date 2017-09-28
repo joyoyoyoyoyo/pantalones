@@ -6,6 +6,7 @@ object ValidatorCLI {
   def parse(args: Array[String], projectPath: String)  = {
     Predef.require(args.length > 0)
 
+    def usage = "--validate_approvers --approvals <comma-delimited-approvers> --changed-files <comma-delimited-changed-files>"
     @tailrec
     def loopOnArgs(acc : List[String], approvers: List[String], cf: List[String]): (List[String], List[String]) = {
       acc match {
@@ -19,7 +20,7 @@ object ValidatorCLI {
     // Run
     Try(loopOnArgs(args.toList, Nil, Nil)) match {
       case Success(x) => x
-      case _ => Logger.warn("Please use correct CLI usage"); sys.exit(0)
+      case _ => Logger.warn(s"Usage:${usage}"); sys.exit(0)
     }
   }
 }

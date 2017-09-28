@@ -33,9 +33,11 @@ Insufficient approvals
 # Installation
 Requires SBT to build.
 Main application code is at: `ValidateApprovals.scala`
+Project was built with intelliJ and ran through the run configurations
 
 
-# Main modules
+
+# Files
 1. CLI parsing: `ValidatorCLI.scala`
 2. Main application: `ValidateApprovals.scala`
 3. Directory dependency model: `Digraph.scala`
@@ -56,4 +58,6 @@ Directory trait
     file root
 
 # Test suite
+The test suites are located at `src/test/scala/DependencyDigraphTest.scala`
+and `src/test/scala/UserDependenciesTest.scala`
 `DependencyDigraphTest.scala`
