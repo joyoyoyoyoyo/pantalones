@@ -42,28 +42,48 @@ object ValidateApprovals extends App {
   val ownersRepository = concurrent.TrieMap[String, List[String]]()
   val dependenciesRepository = concurrent.TrieMap[String, List[String]]()
   val directoryPrivilegesRepo = concurrent.TrieMap[String, List[String]]()
-//  val approvalList = ConcurrentHashMap[String, Boolean]
 
   val root = new File(".")
   walkTree(root)(executionContext)
   localPathToSuccessors.foreach(println)
 
-  println("Accepted")
-  traversePrecommitFiles(acceptors, modifiedFiles)
+  val validation = traversePrecommitFiles(acceptors, modifiedFiles)
+  val approvalList = Map[String, Boolean]()
 
+//  validation.message()
 
 
   def traversePrecommitFiles(approvers: List[String], precommitFiles: List[String]) = {
 
-    //
-//    precommitFiles match {
-//      case changedFile :: pendingFiles => checkApprovers(changedFile, approvers)
-//    }
+    precommitFiles match {
+      case changedFile :: pendingFiles => {
+        // read USERS file and get the list of users
+        val cwd = localPathToAuthorizers.getOrElse(changedFile, List())
+
+        // check if at least one user can approve the current file
+//        checkDirectApprovers(changedFile, cwd)
+      }
+    }
   }
 
-//  def checkApprovers(fileChanged: String, approversToCheck: List[String]): List[String] = {
-//    localPathToAuthorizers
+//  def checkDirectApprovers(fileChanged: String, users: List[String]): List[String] = {
+//
+//    users match {
+//
+//    }
+//
+//    // Rule 1
+//    def loopUsrs(users: List[String], fileChanged) = {
+//      users match {
+//        case user :: pending => if(localPathToDependents.getOrElse(fileChanged))
+//      }
+//    }
+//    loopUsers(cwd, fileChanged)
+//
+//    // Rule2
 //  }
+
+//  def checkTransitiveDependencies()
 
 //  def findApprovers(approving: String, approvers: List[String], file: String) = {
 //    approving match {
@@ -109,15 +129,15 @@ object ValidateApprovals extends App {
   // asynchronously cache files in project repository
   def cacheDirectories(file: File)(implicit ec: ExecutionContext) = {
     cacheTree.put(file.getCanonicalPath, file)
-    val parent = file.getParentFile.getCanonicalFile
-    if (!root.getCanonicalFile.equals(parent))
+    val parent = file.getCanonicalFile.getParentFile.getCanonicalPath
+    if (!root.getCanonicalFile.getName.equals(parent))
       localPathToSuccessors.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)
 
   }
   def cacheFiles(file: File) = {
     cacheTree.put(file.getCanonicalPath, file)
-    val parent = file.getParentFile.getCanonicalFile
-    if (!root.getCanonicalFile.equals(parent))
+    val parent = file.getCanonicalFile.getParentFile.getCanonicalPath
+    if (!root.getCanonicalFile.getName.equals(parent))
     localPathToSuccessors.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)
 
   }
@@ -125,7 +145,7 @@ object ValidateApprovals extends App {
   /**
     * Create an association between the current directory (canonical name) and the list of owners in that directory
     *
-    * Example: src/com/twitter/message/Dependencies -> List["src/com/twitter/follow", "src/com/twitter/user"]
+    * Example: src/com/twitter/message/USERS -> List["src/com/twitter/follow", "src/com/twitter/user"]
     *
     * @param file: DEPENDENCIES file in the current directory
     * @param ec: Threading context
@@ -134,12 +154,12 @@ object ValidateApprovals extends App {
     val owners = { Future.successful(Source.fromFile(file)(Codec.UTF8).getLines.toList) }
     owners.onComplete {
       case Success(authorizedUsers) => {
-        val uniqueUsers = localPathToAuthorizers.getOrElse(file.getCanonicalPath, List[String]()) ::: authorizedUsers
-        localPathToAuthorizers.put(file.getCanonicalPath, uniqueUsers)
-        val parent = file.getParentFile.getCanonicalFile
-        if (!root.getCanonicalFile.equals(parent))
-        localPathToSuccessors.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)
-
+        val directoryPath = file.getCanonicalPath.substring(0, file.getCanonicalPath.length - ReadOnly.OWNERS.toString.length - 1)
+        val uniqueUsers = localPathToAuthorizers.getOrElse(directoryPath, List[String]()) ::: authorizedUsers
+        localPathToAuthorizers.put(directoryPath, uniqueUsers)
+        val parent = file.getCanonicalFile.getParentFile.getCanonicalPath
+        if (!root.getCanonicalFile.getName.equals(parent))
+        localPathToSuccessors.put(directoryPath, parent)
       }
     }
   }
@@ -156,12 +176,12 @@ object ValidateApprovals extends App {
     val dependencies = { Future.successful(Source.fromFile(file)(Codec.UTF8).getLines.map(path => s"$projectPath$path").toList) }
     dependencies.onComplete {
       case Success(dependencyList) => {
-        val canonicalDependency = localPathToDependents.getOrElse(file.getCanonicalPath, List[String]()) ::: dependencyList
-        localPathToDependents.put(file.getCanonicalPath, canonicalDependency)
-        val parent = file.getParentFile.getCanonicalFile
-        if (!root.getCanonicalFile.equals(parent)) {
-          localPathToSuccessors.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)
-        }
+        val directoryPath = file.getCanonicalPath.substring(0, file.getCanonicalPath.length - ReadOnly.DEPENDENCIES.toString.length - 1)
+        val canonicalDependency = localPathToDependents.getOrElse(directoryPath, List[String]()) ::: dependencyList
+        localPathToDependents.put(directoryPath, canonicalDependency)
+        val parent = file.getCanonicalFile.getParentFile.getCanonicalPath
+        if (!root.getCanonicalFile.getName.equals(parent))
+          localPathToSuccessors.put(directoryPath, parent)
       }
     }
   }

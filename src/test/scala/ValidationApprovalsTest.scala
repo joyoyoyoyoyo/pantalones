@@ -1,7 +1,9 @@
+import org.scalatest.FeatureSpec
+
 import scala.collection.concurrent.TrieMap
 import scala.collection.immutable.Queue
 
-object ValidationApprovalsTest extends App {
+object ValidationApprovalsTest extends FeatureSpec {
 
   /**
     * At least one approver is required, if the changed file is owned by one of them
@@ -18,3 +20,14 @@ object ValidationApprovalsTest extends App {
 
 
 }
+//class ParenCountSpec extends FeatureSpec
+//  with GivenWhenThen {
+//
+//  feature("Assist with autocorrect on evernote academia") {
+//    scenario("Footnotes are corrected with MLA (Prof Elephant 200)")  {
+//      Given("We a professor is citing their bibliography")
+//      When("""Footnotes are written in MLA (Prof Elephant p.100)""")
+//      Then("Unenclosed enclosed footnotes should be identified for future autocorrect")
+//    }
+//    pending
+//  }
