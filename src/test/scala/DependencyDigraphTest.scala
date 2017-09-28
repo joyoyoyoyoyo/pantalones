@@ -39,10 +39,15 @@ class DependencyDigraphTest extends FlatSpec {
 
   val dependencies: Digraph[String] = Digraph[String](nodes, edges)
 
+  /**
+    * At least one approver is required, if the changed file is owned by one of them
+    **/
+  val providedRuntime: Array[String] = Array("--approvers", "alovelace,ghopper",
+    "--changed-files", "src/com/twitter/follow/Follow.java,src/com/twitter/user/User.java")
+
 
   "./src/com/twitter/message" should "depend on ./src/com/twitter/{follow, user}" in {
     val readDependencies = dependencies.dfs("./src/com/twitter/message")
     val x = dependencies.dfs("./src/com/twitter/ux")
-    println(x)
   }
 }

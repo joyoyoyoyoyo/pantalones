@@ -1,5 +1,4 @@
 
-import java.io
 import java.io.File
 
 import scala.concurrent.ExecutionContext
@@ -13,10 +12,6 @@ import scala.util.{Success, Try}
 object ValidateApprovals extends App {
   val projectPath = new File(".").getCanonicalPath + "/"
   val arg1, arg2 = ValidatorCLI.parse(args, projectPath)
-
-  // Enqueue for managing the tasks
-//  val modifiedFiles = arg2.value._2.toList.foldLeft(Set[String]()){ (acc, elem) => Set(elem) ++ acc }
-
   val acceptors =
   arg1.value._1.foldLeft(List[String]()){ (acc, elem) => elem :: acc }
   val modifiedFiles =
@@ -33,6 +28,7 @@ object ValidateApprovals extends App {
   val localPathToDependents = concurrent.TrieMap[String, List[String]]()
   val localPathToAuthorizers = concurrent.TrieMap[String, List[String]]()
   val localPathToSuccessors = concurrent.TrieMap[String, String]()
+  val localPathToChangedFiles = concurrent.TrieMap[String, String]()
 
   val root = new File(".")
   walkTree(root)(executionContext)
@@ -50,33 +46,44 @@ object ValidateApprovals extends App {
   val nodes = localPathToDependents.keys.toList.distinct
   val dependencyGraph: Digraph[String] = new Digraph(nodes, edges)
 
-  //    if (destination.nonEmpty) {
-//      destination.foreach { e2 =>
-//        println((e1, e2))
-//        (e1,e2) :: edges
-//        dependencyGraph.appendEdge((e1,e2))
-//      }
-//    }
+  // Acceptance Check
+  val validationMap = Map[String, Boolean]().withDefaultValue(false)
+  acceptors.foreach { proposedAcceptor => {
+      modifiedFiles.foreach { file =>
+        val directory = java.nio.file.Paths.get(modifiedFiles.head).getParent.toString
+        val dependencies = dependencyGraph.dfs(directory)
+        dependencies.foreach { dep =>
+          val users = localPathToAuthorizers.getOrElse(dep, Nil)
+          if (users.contains(proposedAcceptor))
+            validationMap.updated(proposedAcceptor, true)
+        }
+      }
+    }
+  }
 
+  if(validationMap.values.count(_ == false) == 0)
+    println("Accepted")
+  else
+    println("Insufficient approvals")
 
-
-  println("???")
 
 
   def parallelTraverse[A, B, C, D](
         localFile: File,
         cacheDirectories: File => Unit,
+        cacheFiles: File => Unit,
         cacheOwners: File => Unit,
         cacheDependencies: File => Unit) (implicit ec: ExecutionContext): Future[Unit] = {
     localFile match {
       case directories if directories.isDirectory => { Future.successful(cacheDirectories(directories)) }
+      case changedFiles if changedFiles.isFile => { Future.successful(cacheFiles(changedFiles)) }
       case owners if owners.getName.endsWith(ReadOnly.OWNERS.toString) => { Future.successful(cacheOwners(owners)) }
       case dependencies if dependencies.getName.endsWith(ReadOnly.DEPENDENCIES.toString) => { Future.successful(cacheDependencies(dependencies)) }
     }
   }
 
   def walkTree(file: File)(implicit ec: ExecutionContext): Iterable[File] = {
-    Future { parallelTraverse(file, cacheDirectories, cacheOwners, cacheDependencies)(ec) }
+    Future { parallelTraverse(file, cacheDirectories, cacheFiles, cacheOwners, cacheDependencies)(ec) }
     val children = new Iterable[File] {
       def iterator = if (file.isDirectory) file.listFiles.iterator else Iterator.empty
     }
@@ -91,9 +98,14 @@ object ValidateApprovals extends App {
 
   }
   def cacheFiles(file: File) = {
+    modifiedFiles.foreach { changedFile =>
+      if (file.getCanonicalPath.contains(changedFile))
+        localPathToChangedFiles.put(changedFile, file.getCanonicalPath)
+    }
+    val canonicalDirectory = file.getCanonicalPath
     val parent = file.getParentFile.getCanonicalFile
     if (!root.getCanonicalFile.equals(parent))
-    localPathToSuccessors.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)
+      localPathToChangedFiles.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)
 
   }
 

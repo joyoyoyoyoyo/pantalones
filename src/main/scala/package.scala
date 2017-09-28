@@ -1,3 +1,6 @@
+/**
+  * Logger utility
+  */
 package object Logger {
   import java.time.Instant
   def unix_timestamp() = Instant.now

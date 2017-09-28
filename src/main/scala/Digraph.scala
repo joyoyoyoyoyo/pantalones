@@ -1,19 +1,3 @@
-//sealed trait Digraph
-
-//final case class Node[+T](value: T)
-//
-//final case class Digraph[T] {
-//  val nodes: Set[T]
-//}
-//
-//sealed trait Node[+T] {
-//  def adjacent: List[Edge] = Nil
-//  def isVisited = false
-//}
-//final case class Edge[A <: T, B <: T ,+T](from: Node[A], to: Node[B]) extends Node[T]
-//final case class DependencyGraph[Edge[A, B] <: Node[T], +T](nodes: Set[T], edges: Set[Edge]) extends Node [T]{
-//  val nodes
-//}
 object Digraph {
   def apply[A](vertices: List[A], edges: List[(A, A)]): Digraph[A] = new Digraph(vertices, edges)
 }
@@ -39,5 +23,4 @@ final case class Digraph[A](vertices: List[A], edges: List[(A, A)]) {
 
 
 //  lazy val edges =
-
 
