@@ -30,17 +30,16 @@ object ValidateApprovals extends App {
   val root = new File(".")
   walkTree(root)(executionContext)
 
-  val edges = localPathToDependents.keys.foldLeft(List.empty[(String, String)]) { (edgesAcc,e1) =>
-    val destination = localPathToDependents.get(e1)
-    if (Try(destination.get).isSuccess) {
-      destination.get.flatMap(e2 =>
-        (e1, e2) :: edgesAcc
-      )
+  val edges = localPathToDependents.keys.foldLeft(Set.empty[(String, String)]) { (edgesAcc: Set[(String, String)],e1: String) =>
+    val destination = localPathToDependents.getOrElse(e1, Nil)
+    if (destination.nonEmpty) {
+      val x =destination.map((e1, _))
+      edgesAcc ++ x
     }
     else
       edgesAcc
-  }.distinct
-  val nodes = localPathToDependents.keys.toList.distinct
+  }
+  val nodes = localPathToDependents.keys.toSet
   val dependencyGraph: Digraph[String] = new Digraph(nodes, edges)
 
   // Acceptance Check

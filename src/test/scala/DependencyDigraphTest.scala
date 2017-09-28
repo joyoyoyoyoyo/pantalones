@@ -38,7 +38,7 @@ class DependencyDigraphTest extends FlatSpec {
     ("./src/com/twitter/tweet", "./src/com/twitter/user"),
     ("./src/com/twitter/ux", "./src/com/twitter/message")
   )
-  val dependencies: Digraph[String] = Digraph[String](nodes, edges)
+  val dependencies: Digraph[String] = Digraph[String](nodes.toSet, edges.toSet)
 
   /**
     * At least one approver is required, if the changed file is owned by one of them
