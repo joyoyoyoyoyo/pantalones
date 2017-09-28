@@ -6,9 +6,8 @@ import scala.concurrent.Future
 import scala.io.{Codec, Source}
 import java.util.concurrent.ForkJoinPool
 
-import scala.collection.concurrent
 import scala.collection.concurrent.TrieMap
-import scala.util.{Success, Try}
+import scala.util.{Success}
 
 object ValidateApprovals extends App {
   /**
@@ -25,7 +24,7 @@ object ValidateApprovals extends App {
     */
   val parallelism = Runtime.getRuntime.availableProcessors * 32
   val forkJoinPool = new ForkJoinPool(parallelism)
-  val executionContext = ExecutionContext.fromExecutorService(forkJoinPool)
+  implicit val executionContext = ExecutionContext.fromExecutorService(forkJoinPool)
 
   /**
     * Out in memory model data structures
@@ -144,6 +143,7 @@ object ValidateApprovals extends App {
   val output = validate(acceptors.toSet, modifiedFiles.toSet)
   println(output)
 
+  executionContext.shutdown()
   /**
     * Loop through the list of arguments provided and search for the appropriate dependencies
     *   and users
@@ -175,9 +175,4 @@ object ValidateApprovals extends App {
 
 
 
-}
-
-object ReadOnly extends Enumeration {
-  type ReadOnly = Value
-  val OWNERS, DEPENDENCIES = Value
 }

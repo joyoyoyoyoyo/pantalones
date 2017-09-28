@@ -15,7 +15,7 @@ directories has approved it.
 
 # Usage
 ```
---validate_approvers --approvals <comma-delimited-approvers> --changed-files <comma-delimited-changed-files>
+validate_approvers --approvals <comma-delimited-approvers> --changed-files <comma-delimited-changed-files>
 ```
 
 ```
@@ -31,7 +31,14 @@ Insufficient approvals
 ```
 
 # Installation
-Requires SBT to build.
+
+```
+$ sbt compile
+
+# Run the project
+$ sbt "run --approvers alovelace,ghopper --changed-files src/com/twitter/follow/Follow.java,src/com/twitter/user/User.java"
+```
+
 Main application code is at: `ValidateApprovals.scala`
 Project was built with intelliJ and ran through the run configurations
 
@@ -58,6 +65,14 @@ Directory trait
     file root
 
 # Test suite
-The test suites are located at `src/test/scala/DependencyDigraphTest.scala`
-and `src/test/scala/UserDependenciesTest.scala`
-`DependencyDigraphTest.scala`
+The test suites are located at: 
+* `src/test/scala/DependencyDigraphTest.scala`
+* `src/test/scala/UserDependenciesTest.scala`
+
+
+# Troubleshooting
+* If an error is produced during the project build, 
+then IntelliJ can be used and the run configurations can be adjusted
+* validate_approvals should point to the project jar file,
+  this is executable through scala 
+
