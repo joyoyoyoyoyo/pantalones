@@ -12,10 +12,8 @@ import scala.util.{Success, Try}
 object ValidateApprovals extends App {
   val projectPath = new File(".").getCanonicalPath + "/"
   val arg1, arg2 = ValidatorCLI.parse(args, projectPath)
-  val acceptors =
-  arg1.value._1.foldLeft(List[String]()){ (acc, elem) => elem :: acc }
-  val modifiedFiles =
-    arg2.value._2.foldLeft(List[String]()){ (acc, elem) => elem :: acc }
+  val acceptors = arg1._1.foldLeft(List[String]()){ (acc, elem) => elem :: acc }
+  val modifiedFiles = arg2._2.foldLeft(List[String]()){ (acc, elem) => elem :: acc }
 
 
   // threading and parellism context
@@ -47,6 +45,7 @@ object ValidateApprovals extends App {
   val dependencyGraph: Digraph[String] = new Digraph(nodes, edges)
 
   // Acceptance Check
+  // TODO: Flatmap (6.5 Options as Flow Control)
   val validationMap = Map[String, Boolean]().withDefaultValue(false)
   acceptors.foreach { proposedAcceptor => {
       modifiedFiles.foreach { file =>
@@ -71,19 +70,17 @@ object ValidateApprovals extends App {
   def parallelTraverse[A, B, C, D](
         localFile: File,
         cacheDirectories: File => Unit,
-        cacheFiles: File => Unit,
         cacheOwners: File => Unit,
         cacheDependencies: File => Unit) (implicit ec: ExecutionContext): Future[Unit] = {
     localFile match {
       case directories if directories.isDirectory => { Future.successful(cacheDirectories(directories)) }
-      case changedFiles if changedFiles.isFile => { Future.successful(cacheFiles(changedFiles)) }
       case owners if owners.getName.endsWith(ReadOnly.OWNERS.toString) => { Future.successful(cacheOwners(owners)) }
       case dependencies if dependencies.getName.endsWith(ReadOnly.DEPENDENCIES.toString) => { Future.successful(cacheDependencies(dependencies)) }
     }
   }
 
   def walkTree(file: File)(implicit ec: ExecutionContext): Iterable[File] = {
-    Future { parallelTraverse(file, cacheDirectories, cacheFiles, cacheOwners, cacheDependencies)(ec) }
+    Future { parallelTraverse(file, cacheDirectories, cacheOwners, cacheDependencies)(ec) }
     val children = new Iterable[File] {
       def iterator = if (file.isDirectory) file.listFiles.iterator else Iterator.empty
     }
