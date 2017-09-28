@@ -11,52 +11,71 @@ import scala.collection.concurrent.TrieMap
 import scala.util.{Success, Try}
 
 object ValidateApprovals extends App {
+  /**
+    * Parse program arguments
+    */
   val projectPath = new File(".").getCanonicalPath + "/"
   val arg1, arg2 = ValidatorCLI.parse(args, projectPath)
   val acceptors = arg1._1.foldLeft(List[String]()){ (acc, elem) => elem :: acc }
   val modifiedFiles = arg2._2.foldLeft(List[String]()){ (acc, elem) => elem :: acc }
 
 
-  // threading and parellism context
+  /**
+    * Use local threading & parallelism context from local machine for speedup (workers)
+    */
   val parallelism = Runtime.getRuntime.availableProcessors * 32
   val forkJoinPool = new ForkJoinPool(parallelism)
   val executionContext = ExecutionContext.fromExecutorService(forkJoinPool)
 
-  // Our persistent data structures
-  // on a read, we determine a directories dependencies
-  val localPathToDependents = concurrent.TrieMap[String, List[String]]()
-  val localPathToAuthorizers = concurrent.TrieMap[String, Set[String]]()
-  val localPathToSuccessors = concurrent.TrieMap[String, String]()
+  /**
+    * Out in memory model data structures
+    * =====================================
+    * We use two TrieMaps for caching until the Digraphs are built for dependency resolution
+    *   1. for caching directory dependencies, during the filesystem walk
+    *   2. for caching users (authorizers), during the filesystem walk
+    *
+    * These concurrent TrieMaps are a concurrent thread-safe lock-free data structure
+    * They have an O(1) snapshot operation.
+    * The use of the TrieMap's main advantage in this usage is that we can guarantee that
+    * our iterators stay consistent in a concurrent run (This means we won't have collisions).
+    *
+    * References: https://www.researchgate.net/publication/221643801_Concurrent_Tries_with_Efficient_Non-Blocking_Snapshots
+    *
+    */
+  val localPathToDependents = TrieMap[String, List[String]]()
+  val localPathToAuthorizers = TrieMap[String, Set[String]]()
 
+
+  /**
+    * Note: Walking the tree is parallelized
+    * 1. Walk the local project filesystem.
+    * 2. Upon arrival of a USERS file, we create an association between the directory and list of users
+    *    Example: TrieMap("./src/com/twitter/follow", Set("alovelace", "ghopper")
+    * 3. Upon arrival of a DEPENDENCIES file, we create an association between the directory and lists of dependencies
+    *    (This includes transitive dependencies)
+    * 4. After walking the filesystem for this project, continue main function
+    *
+    */
   val root = new File(".")
   walkTree(root)(executionContext)
 
   def parallelTraverse[A, B, C, D](
         localFile: File,
-        cacheDirectories: File => Unit,
         cacheOwners: File => Unit,
         cacheDependencies: File => Unit) (implicit ec: ExecutionContext): Future[Unit] = {
     localFile match {
-      case directories if directories.isDirectory => { Future.successful(cacheDirectories(directories)) }
-      case owners if owners.getName.endsWith(ReadOnly.OWNERS.toString) => { Future.successful(cacheOwners(owners)) }
-      case dependencies if dependencies.getName.endsWith(ReadOnly.DEPENDENCIES.toString) => { Future.successful(cacheDependencies(dependencies)) }
+      /** asynchronously cache files in project repository **/
+      case owners if !owners.isDirectory && owners.getName.endsWith(ReadOnly.OWNERS.toString) => { Future.successful(cacheOwners(owners)) }
+      case dependencies if !dependencies.isDirectory && dependencies.getName.endsWith(ReadOnly.DEPENDENCIES.toString) => { Future.successful(cacheDependencies(dependencies)) }
     }
   }
 
   def walkTree(file: File)(implicit ec: ExecutionContext): Iterable[File] = {
-    Future { parallelTraverse(file, cacheDirectories, cacheOwners, cacheDependencies)(ec) }
+    Future { parallelTraverse(file, cacheOwners, cacheDependencies)(ec) }
     val children = new Iterable[File] {
       def iterator = if (file.isDirectory) file.listFiles.iterator else Iterator.empty
     }
     Seq(file) ++: children.flatMap(walkTree)
-  }
-
-  // asynchronously cache files in project repository
-  def cacheDirectories(file: File)(implicit ec: ExecutionContext) = {
-    val parent = file.getParentFile.getCanonicalFile
-    if (!root.getCanonicalFile.equals(parent))
-      localPathToSuccessors.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)
-
   }
 
 
@@ -68,7 +87,7 @@ object ValidateApprovals extends App {
     * @param file: USERS file
     * @param ec: Threading context
     */
-  def cacheOwners(file: File)(implicit ec: ExecutionContext) = {
+  def cacheOwners(file: File)(implicit ec: ExecutionContext): Unit = {
     val owners = { Future.successful(Source.fromFile(file)(Codec.UTF8).getLines.toList) }
     owners.onComplete {
       case Success(authorizedUsers) => {
@@ -76,10 +95,6 @@ object ValidateApprovals extends App {
           ReadOnly.OWNERS.toString.length - 1)
         val uniqueUsers = localPathToAuthorizers.getOrElse(canonicalDirectory, Set[String]()) ++ authorizedUsers
         localPathToAuthorizers.put(canonicalDirectory, uniqueUsers)
-        val parent = file.getParentFile.getCanonicalFile
-        if (!root.getCanonicalFile.equals(parent))
-          localPathToSuccessors.put(canonicalDirectory, file.getParentFile.getCanonicalPath)
-
       }
     }
   }
@@ -92,7 +107,7 @@ object ValidateApprovals extends App {
     * @param file: DEPENDENCIES file in the current directory
     * @param ec: Threading context
     */
-  def cacheDependencies(file: File)(implicit ec: ExecutionContext) = { // normalized the project directory format
+  def cacheDependencies(file: File)(implicit ec: ExecutionContext): Unit = { // normalized the project directory format
     val dependencies = { Future.successful(Source.fromFile(file)(Codec.UTF8).getLines.map(path => s"$projectPath$path").toList) }
     dependencies.onComplete {
       case Success(dependencyList) => {
@@ -101,17 +116,13 @@ object ValidateApprovals extends App {
         val canonicalDependency =
           localPathToDependents.getOrElse(canonicalDirectory, List[String]()) ::: dependencyList
         localPathToDependents.put(canonicalDirectory, canonicalDependency)
-        val parent = file.getParentFile.getCanonicalFile
-        if (!root.getCanonicalFile.equals(parent)) {
-          localPathToSuccessors.put(canonicalDirectory, file.getParentFile.getCanonicalPath)
-        }
       }
     }
   }
 
 
   /***
-    * Build Dependency Graphs
+    * Build Dependency Graphs for DEPENDENCIES & USERS
     */
   val dirEdges = localPathToDependents.keys.foldLeft(Set.empty[(String, String)]) { (edgesAcc,e1) =>
     val destination = localPathToDependents.getOrElse(e1, Set())
@@ -127,7 +138,10 @@ object ValidateApprovals extends App {
   val userDigraph: Digraph[String] = new Digraph(userNodes, userDependencies)
 
 
-  val output = validate()
+  /**
+    * Validate our program arguments to check if the requirements were met for approval
+    */
+  val output = validate(acceptors.toSet, modifiedFiles.toSet)
   println(output)
 
   /**
@@ -136,10 +150,10 @@ object ValidateApprovals extends App {
     *
     * @return Accepted or Insufficient approvals
     */
-  def validate(): String = {
+  def validate(approvals: Set[String], changedFiles: Set[String]): String = {
     val validationMap = TrieMap[String, Boolean]()
-    val mine = acceptors.foldLeft(Set.empty[String]) { (acc, proposedAcceptor) => {
-      modifiedFiles.foldLeft(acc) { (fileAcc, file) =>
+    val mine = approvals.foldLeft(Set.empty[String]) { (acc, proposedAcceptor) => {
+      changedFiles.foldLeft(acc) { (fileAcc, file) =>
         val directory = java.nio.file.Paths.get(file).getParent.toString
         val digraph = dependencyGraph.dfs(directory)
         digraph.foldLeft(fileAcc) { (dirAcc, dep) => {
