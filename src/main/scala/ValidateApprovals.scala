@@ -26,7 +26,6 @@ object ValidateApprovals extends App {
   val localPathToDependents = concurrent.TrieMap[String, List[String]]()
   val localPathToAuthorizers = concurrent.TrieMap[String, List[String]]()
   val localPathToSuccessors = concurrent.TrieMap[String, String]()
-  val localPathToChangedFiles = concurrent.TrieMap[String, String]()
 
   val root = new File(".")
   walkTree(root)(executionContext)
@@ -92,17 +91,6 @@ object ValidateApprovals extends App {
     val parent = file.getParentFile.getCanonicalFile
     if (!root.getCanonicalFile.equals(parent))
       localPathToSuccessors.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)
-
-  }
-  def cacheFiles(file: File) = {
-    modifiedFiles.foreach { changedFile =>
-      if (file.getCanonicalPath.contains(changedFile))
-        localPathToChangedFiles.put(changedFile, file.getCanonicalPath)
-    }
-    val canonicalDirectory = file.getCanonicalPath
-    val parent = file.getParentFile.getCanonicalFile
-    if (!root.getCanonicalFile.equals(parent))
-      localPathToChangedFiles.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)
 
   }
 
