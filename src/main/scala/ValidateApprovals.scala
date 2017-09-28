@@ -7,6 +7,7 @@ import scala.io.{Codec, Source}
 import java.util.concurrent.ForkJoinPool
 
 import scala.collection.concurrent
+import scala.collection.concurrent.TrieMap
 import scala.util.{Success, Try}
 
 object ValidateApprovals extends App {
@@ -126,26 +127,37 @@ object ValidateApprovals extends App {
   val userDigraph: Digraph[String] = new Digraph(userNodes, userDependencies)
 
 
-  // Acceptance Check
-  val validationMap = Map[String, Boolean]().withDefaultValue(false)
-  acceptors.foreach { proposedAcceptor => {
-    modifiedFiles.foreach { file =>
-      val directory = java.nio.file.Paths.get(modifiedFiles.head).getParent.toString
-      val dependencies = dependencyGraph.dfs(directory)
-      dependencies.foreach { dep =>
-        val users = localPathToAuthorizers.getOrElse(dep.toString, Set())
-        if (users.contains(proposedAcceptor))
-          validationMap.updated(proposedAcceptor, true)
+  val output = validate()
+  println(output)
+
+  /**
+    * Loop through the list of arguments provided and search for the appropriate dependencies
+    *   and users
+    *
+    * @return Accepted or Insufficient approvals
+    */
+  def validate(): String = {
+    val validationMap = TrieMap[String, Boolean]()
+    val mine = acceptors.foldLeft(Set.empty[String]) { (acc, proposedAcceptor) => {
+      modifiedFiles.foldLeft(acc) { (fileAcc, file) =>
+        val directory = java.nio.file.Paths.get(file).getParent.toString
+        val digraph = dependencyGraph.dfs(directory)
+        digraph.foldLeft(fileAcc) { (dirAcc, dep) => {
+          val users = localPathToAuthorizers.getOrElse(dep.toString, Set())
+          if (users.contains(proposedAcceptor))
+            validationMap.put(proposedAcceptor, true)
+        }
+          fileAcc
+        }
+        acc
       }
     }
+    }
+    if (validationMap.values.count(_ == false) == 0)
+      "Accepted"
+    else
+      "Insufficient approvals"
   }
-  }
-
-  if(validationMap.values.count(_ == false) == 0)
-    println("Accepted")
-  else
-    println("Insufficient approvals")
-
 
 
 

@@ -2,6 +2,10 @@ import org.scalatest._
 
 import scala.collection.concurrent.TrieMap
 
+
+/**
+  * This test contains the integration test for the default case provided
+  */
 class UserDependenciesTest extends FlatSpec{
   val PATH = "./src/com/twitter/"
 
@@ -44,6 +48,33 @@ class UserDependenciesTest extends FlatSpec{
     val messageDep = dependencies.dfs(directory)
     val expected = Set("./src/com/twitter/user", "./src/com/twitter/follow", "./src/com/twitter/message")
     assert (messageDep == expected)
+
+  }
+
+  "default case provided in the requirements" should "approve" in {
+    val modifiedFiles = Set("./src/com/twitter/user/User.java", "./src/com/twitter/follow/Follow.java")
+    val approvers = Set("alovelace", "ghopper")
+
+    // Acceptance Check
+    val validationMap = TrieMap[String, Boolean]()
+    val mine = approvers.foldLeft(Set.empty[String]) { (acc, proposedAcceptor) => {
+      modifiedFiles.foldLeft(acc) { (fileAcc, file) =>
+          val directory = java.nio.file.Paths.get(file).getParent.toString
+          val digraph = dependencies.dfs(directory)
+          digraph.foldLeft(fileAcc) { (dirAcc, dep) => {
+            val users = directoryOwners.getOrElse(dep.toString, Set())
+            if (users.contains(proposedAcceptor))
+              validationMap.put(proposedAcceptor, true)
+          }
+            fileAcc
+          }
+          acc
+        }
+      }
+    }
+    assert(validationMap.values.count(_ == true) == approvers.size)
+
+
 
   }
 }
