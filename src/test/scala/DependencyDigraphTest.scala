@@ -37,7 +37,7 @@ class DependencyDigraphTest extends FlatSpec {
     ("./src/com/twitter/ux", "./src/com/twitter/message")
   )
 
-  val dependencies: Digraph[String] = Digraph[String](nodes, edges)
+  val dependencies: Digraph[String] = Digraph[String](nodes.toSet, edges.toSet)
 
 
   "./src/com/twitter/message" should "depend on ./src/com/twitter/{follow, user}" in {
