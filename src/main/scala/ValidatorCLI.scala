@@ -20,7 +20,7 @@ object ValidatorCLI {
     // Run
     Try(loopOnArgs(args.toList, Nil, Nil)) match {
       case Success(x) => x
-      case _ => Logger.error("Please use correct usage")
+      case _ => Logger.warn("Please use correct CLI usage"); sys.exit(0)
     }
   }
 }

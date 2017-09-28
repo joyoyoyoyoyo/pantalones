@@ -24,7 +24,7 @@ object ValidateApprovals extends App {
   // Our persistent data structures
   // on a read, we determine a directories dependencies
   val localPathToDependents = concurrent.TrieMap[String, List[String]]()
-  val localPathToAuthorizers = concurrent.TrieMap[String, List[String]]()
+  val localPathToAuthorizers = concurrent.TrieMap[String, Set[String]]()
   val localPathToSuccessors = concurrent.TrieMap[String, String]()
 
   val root = new File(".")
@@ -73,7 +73,7 @@ object ValidateApprovals extends App {
       case Success(authorizedUsers) => {
         val canonicalDirectory = file.getCanonicalPath.substring(0, file.getCanonicalPath.length -
           ReadOnly.OWNERS.toString.length - 1)
-        val uniqueUsers = localPathToAuthorizers.getOrElse(canonicalDirectory, List[String]()) ::: authorizedUsers
+        val uniqueUsers = localPathToAuthorizers.getOrElse(canonicalDirectory, Set[String]()) ++ authorizedUsers
         localPathToAuthorizers.put(canonicalDirectory, uniqueUsers)
         val parent = file.getParentFile.getCanonicalFile
         if (!root.getCanonicalFile.equals(parent))
@@ -120,7 +120,7 @@ object ValidateApprovals extends App {
   val dependencyGraph: Digraph[String] = new Digraph(dirNodes, dirEdges)
 
   val userDependencies = localPathToAuthorizers.keys.foldLeft(Set.empty[(String,String)]) { (edgesAcc,e1: String) =>
-    val users: List[String] = localPathToAuthorizers.getOrElse(e1, List.empty[String])
+    val users: List[String] = localPathToAuthorizers.getOrElse(e1, Set.empty[String]).toList
     if (users.nonEmpty) { edgesAcc ++ users.flatMap(user => Set[(String, String)]((e1 ,user))) } else edgesAcc }
   val userNodes = localPathToAuthorizers.keys.toSet
   val userDigraph: Digraph[String] = new Digraph(userNodes, userDependencies)
@@ -133,7 +133,7 @@ object ValidateApprovals extends App {
       val directory = java.nio.file.Paths.get(modifiedFiles.head).getParent.toString
       val dependencies = dependencyGraph.dfs(directory)
       dependencies.foreach { dep =>
-        val users = localPathToAuthorizers.getOrElse(dep.toString, Nil)
+        val users = localPathToAuthorizers.getOrElse(dep.toString, Set())
         if (users.contains(proposedAcceptor))
           validationMap.updated(proposedAcceptor, true)
       }
