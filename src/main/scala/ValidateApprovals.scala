@@ -37,6 +37,7 @@ object ValidateApprovals extends App {
   val root = new File(".")
   walkTree(root)(executionContext)
 
+
   val edges = localPathToDependents.keys.foldLeft(List.empty[(String, String)]) { (edgesAcc,e1) =>
     val destination = localPathToDependents.get(e1)
     if (Try(destination.get).isSuccess) {
@@ -95,27 +96,6 @@ object ValidateApprovals extends App {
 
   }
 
-  /**
-    * Create an association between the current directory (canonical name) and the list of owners in that directory
-    *
-    * Example: src/com/twitter/message/Dependencies -> List["src/com/twitter/follow", "src/com/twitter/user"]
-    *
-    * @param file: DEPENDENCIES file in the current directory
-    * @param ec: Threading context
-    */
-  def cacheOwners(file: File)(implicit ec: ExecutionContext) = {
-    val owners = { Future.successful(Source.fromFile(file)(Codec.UTF8).getLines.toList) }
-    owners.onComplete {
-      case Success(authorizedUsers) => {
-        val uniqueUsers = localPathToAuthorizers.getOrElse(file.getCanonicalPath, List[String]()) ::: authorizedUsers
-        localPathToAuthorizers.put(file.getCanonicalPath, uniqueUsers)
-        val parent = file.getParentFile.getCanonicalFile
-        if (!root.getCanonicalFile.equals(parent))
-        localPathToSuccessors.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)
-
-      }
-    }
-  }
 
   /**
     * Create an association between the current directory and the directories listed on the dependency list
@@ -125,17 +105,42 @@ object ValidateApprovals extends App {
     * @param file: USERS file
     * @param ec: Threading context
     */
+  def cacheOwners(file: File)(implicit ec: ExecutionContext) = {
+    val owners = { Future.successful(Source.fromFile(file)(Codec.UTF8).getLines.toList) }
+    owners.onComplete {
+      case Success(authorizedUsers) => {
+        val canonicalDirectory = file.getCanonicalPath.substring(0, file.getCanonicalPath.length -
+          ReadOnly.OWNERS.toString.length - 1)
+        val uniqueUsers = localPathToAuthorizers.getOrElse(canonicalDirectory, List[String]()) ::: authorizedUsers
+        localPathToAuthorizers.put(canonicalDirectory, uniqueUsers)
+        val parent = file.getParentFile.getCanonicalFile
+        if (!root.getCanonicalFile.equals(parent))
+        localPathToSuccessors.put(canonicalDirectory, file.getParentFile.getCanonicalPath)
+
+      }
+    }
+  }
+
+  /**
+    * Create an association between the current directory (canonical name) and the list of owners in that directory
+    *
+    * Example: src/com/twitter/message/Dependencies -> List["src/com/twitter/follow", "src/com/twitter/user"]
+    *
+    * @param file: DEPENDENCIES file in the current directory
+    * @param ec: Threading context
+    */
   def cacheDependencies(file: File)(implicit ec: ExecutionContext) = { // normalized the project directory format
     val dependencies = { Future.successful(Source.fromFile(file)(Codec.UTF8).getLines.map(path => s"$projectPath$path").toList) }
     dependencies.onComplete {
       case Success(dependencyList) => {
+        val canonicalDirectory = file.getCanonicalPath.substring(0, file.getCanonicalPath.length -
+          ReadOnly.DEPENDENCIES.toString.length - 1)
         val canonicalDependency =
-          localPathToDependents.getOrElse(file.getCanonicalPath, List[String]()) ::: dependencyList
-        localPathToDependents.put(file.getCanonicalPath.substring(0, file.getCanonicalPath.length -
-          ReadOnly.DEPENDENCIES.toString.length - 1), canonicalDependency)
+          localPathToDependents.getOrElse(canonicalDirectory, List[String]()) ::: dependencyList
+        localPathToDependents.put(canonicalDirectory, canonicalDependency)
         val parent = file.getParentFile.getCanonicalFile
         if (!root.getCanonicalFile.equals(parent)) {
-          localPathToSuccessors.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)
+          localPathToSuccessors.put(canonicalDirectory, file.getParentFile.getCanonicalPath)
         }
       }
     }
