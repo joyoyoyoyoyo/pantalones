@@ -1,17 +1,11 @@
 
 import java.io.File
-
-import scala.collection.immutable.Queue
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.io.{Codec, Source}
-import java.util.concurrent.{ConcurrentHashMap, ForkJoinPool}
-
-import ValidateApprovals.acceptors
-
+import java.util.concurrent.ForkJoinPool
 import scala.collection.concurrent
-import scala.collection.concurrent.TrieMap
-import scala.util.{Failure, Success, Try}
+import scala.util.Success
 
 object ValidateApprovals extends App {
   val projectPath = new File(".").getCanonicalPath + "/"
@@ -32,59 +26,15 @@ object ValidateApprovals extends App {
   val executionContext = ExecutionContext.fromExecutorService(forkJoinPool)
 
   // Our persistent data structures
-  val cacheTree = concurrent.TrieMap[String, File]()
   // on a read, we determine a directories dependencies
   val localPathToDependents = concurrent.TrieMap[String, List[String]]()
   val localPathToAuthorizers = concurrent.TrieMap[String, List[String]]()
   val localPathToSuccessors = concurrent.TrieMap[String, String]()
-  val snapshot = cacheTree.snapshot
-  val cacheDir = concurrent.TrieMap[String, File]()
-  val ownersRepository = concurrent.TrieMap[String, List[String]]()
-  val dependenciesRepository = concurrent.TrieMap[String, List[String]]()
-  val directoryPrivilegesRepo = concurrent.TrieMap[String, List[String]]()
-//  val approvalList = ConcurrentHashMap[String, Boolean]
 
   val root = new File(".")
   walkTree(root)(executionContext)
-  localPathToSuccessors.foreach(println)
+  println("???")
 
-  println("Accepted")
-  traversePrecommitFiles(acceptors, modifiedFiles)
-
-
-
-  def traversePrecommitFiles(approvers: List[String], precommitFiles: List[String]) = {
-
-    //
-//    precommitFiles match {
-//      case changedFile :: pendingFiles => checkApprovers(changedFile, approvers)
-//    }
-  }
-
-//  def checkApprovers(fileChanged: String, approversToCheck: List[String]): List[String] = {
-//    localPathToAuthorizers
-//  }
-
-//  def findApprovers(approving: String, approvers: List[String], file: String) = {
-//    approving match {
-//      case _ :: Nil => Nil
-//      case head :: tail => {
-//      }
-//      case _ => println
-//
-//    }
-//  }
-//  def findDependencies(approvals: List[String], precommitFiles: List[String], changedFile: String): List[String] = {
-//    approvals match {
-//      case found => {
-//        Success("Valid")
-//        findApprovers(approvers.head, approvers.tail, changedFile)
-//        findDependencies(approvals,precommitFiles.tail, precommitFiles, found)
-//        Nil
-//      }
-//      case _ => Nil
-//    }
-//  }
 
   def parallelTraverse[A, B, C, D](
         localFile: File,
@@ -108,14 +58,12 @@ object ValidateApprovals extends App {
 
   // asynchronously cache files in project repository
   def cacheDirectories(file: File)(implicit ec: ExecutionContext) = {
-    cacheTree.put(file.getCanonicalPath, file)
     val parent = file.getParentFile.getCanonicalFile
     if (!root.getCanonicalFile.equals(parent))
       localPathToSuccessors.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)
 
   }
   def cacheFiles(file: File) = {
-    cacheTree.put(file.getCanonicalPath, file)
     val parent = file.getParentFile.getCanonicalFile
     if (!root.getCanonicalFile.equals(parent))
     localPathToSuccessors.put(file.getCanonicalPath, file.getParentFile.getCanonicalPath)

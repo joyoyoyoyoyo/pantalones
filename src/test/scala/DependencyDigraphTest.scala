@@ -23,7 +23,8 @@ class DependencyDigraphTest extends FlatSpec {
     "./src/com/twitter/message",
     "./src/com/twitter/follow",
     "./src/com/twitter/user",
-    "./src/com/twitter/tweet"
+    "./src/com/twitter/tweet",
+    "./src/com/twitter/ux"
   )
 
   val edges = List(
@@ -32,15 +33,16 @@ class DependencyDigraphTest extends FlatSpec {
     ("./src/com/twitter/follow", "./src/com/twitter/user"),
     ("./src/com/twitter/user", ""),
     ("./src/com/twitter/tweet", "./src/com/twitter/follow"),
-    ("./src/com/twitter/tweet", "./src/com/twitter/user")
+    ("./src/com/twitter/tweet", "./src/com/twitter/user"),
+    ("./src/com/twitter/ux", "./src/com/twitter/message")
   )
 
-
-  val dependencies = Digraph[String](nodes, edges)
+  val dependencies: Digraph[String] = Digraph[String](nodes, edges)
 
 
   "./src/com/twitter/message" should "depend on ./src/com/twitter/{follow, user}" in {
-    val x = dependencies.dfs("./src/com/twitter/message")
+    val readDependencies = dependencies.dfs("./src/com/twitter/message")
+    val x = dependencies.dfs("./src/com/twitter/ux")
     println(x)
   }
 }
