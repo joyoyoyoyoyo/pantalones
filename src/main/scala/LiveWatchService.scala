@@ -2,7 +2,9 @@ import java.nio.file._
 import java.util
 
 /**
-  * Currently unused: this is a life watch service for detecting if a file is created, modified, or deleted
+  * Deprecated (Not being used).
+  * This is a life watch service for detecting if a file is created, modified, or deleted.
+  *
   */
 object LiveWatchService {
   val root = Paths.get(".")

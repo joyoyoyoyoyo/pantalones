@@ -6,7 +6,6 @@ object ValidatorCLI {
   def parse(args: Array[String], projectPath: String)  = {
     Predef.require(args.length > 0)
 
-    // Parse arguments
     @tailrec
     def loopOnArgs(acc : List[String], approvers: List[String], cf: List[String]): (List[String], List[String]) = {
       acc match {
