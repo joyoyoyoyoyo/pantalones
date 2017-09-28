@@ -19,8 +19,3 @@ final case class Digraph[A](vertices: List[A], edges: List[(A, A)]) {
     search(node, Set.empty[A]).distinct
   }
 }
-
-
-
-//  lazy val edges =
-

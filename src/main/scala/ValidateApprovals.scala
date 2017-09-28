@@ -124,13 +124,11 @@ object ValidateApprovals extends App {
       case Success(authorizedUsers) => {
         val canonicalDirectory = file.getCanonicalPath.substring(0, file.getCanonicalPath.length -
           ReadOnly.OWNERS.toString.length - 1)
-        val uniqueUsers = localPathToAuthorizers.getOrElse(file.getCanonicalPath.substring(0, file.getCanonicalPath.length -
-          ReadOnly.OWNERS.toString.length - 1), List[String]()) ::: authorizedUsers
+        val uniqueUsers = localPathToAuthorizers.getOrElse(canonicalDirectory, List[String]()) ::: authorizedUsers
         localPathToAuthorizers.put(file.getCanonicalPath, uniqueUsers)
         val parent = file.getParentFile.getCanonicalFile
         if (!root.getCanonicalFile.equals(parent))
-        localPathToSuccessors.put(file.getCanonicalPath.substring(0, file.getCanonicalPath.length -
-          ReadOnly.OWNERS.toString.length - 1), file.getParentFile.getCanonicalPath)
+          localPathToSuccessors.put(canonicalDirectory, file.getParentFile.getCanonicalPath)
 
       }
     }
