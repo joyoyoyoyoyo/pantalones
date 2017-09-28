@@ -167,7 +167,7 @@ object ValidateApprovals extends App {
       }
     }
     }
-    if (validationMap.values.count(_ == false) == 0)
+    if (validationMap.values.count(_ == true) == approvals.size)
       "Accepted"
     else
       "Insufficient approvals"
