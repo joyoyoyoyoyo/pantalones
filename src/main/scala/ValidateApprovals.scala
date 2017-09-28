@@ -1,4 +1,5 @@
 
+import java.io
 import java.io.File
 
 import scala.concurrent.ExecutionContext
@@ -32,11 +33,9 @@ object ValidateApprovals extends App {
   val localPathToDependents = concurrent.TrieMap[String, List[String]]()
   val localPathToAuthorizers = concurrent.TrieMap[String, List[String]]()
   val localPathToSuccessors = concurrent.TrieMap[String, String]()
-  val dependencyGraph = new Digraph[String](Nil, Nil)
 
   val root = new File(".")
   walkTree(root)(executionContext)
-
 
   val edges = localPathToDependents.keys.foldLeft(List.empty[(String, String)]) { (edgesAcc,e1) =>
     val destination = localPathToDependents.get(e1)
@@ -48,6 +47,8 @@ object ValidateApprovals extends App {
     else
       edgesAcc
   }.distinct
+  val nodes = localPathToDependents.keys.toList.distinct
+  val dependencyGraph: Digraph[String] = new Digraph(nodes, edges)
 
   //    if (destination.nonEmpty) {
 //      destination.foreach { e2 =>
@@ -111,11 +112,13 @@ object ValidateApprovals extends App {
       case Success(authorizedUsers) => {
         val canonicalDirectory = file.getCanonicalPath.substring(0, file.getCanonicalPath.length -
           ReadOnly.OWNERS.toString.length - 1)
-        val uniqueUsers = localPathToAuthorizers.getOrElse(canonicalDirectory, List[String]()) ::: authorizedUsers
-        localPathToAuthorizers.put(canonicalDirectory, uniqueUsers)
+        val uniqueUsers = localPathToAuthorizers.getOrElse(file.getCanonicalPath.substring(0, file.getCanonicalPath.length -
+          ReadOnly.OWNERS.toString.length - 1), List[String]()) ::: authorizedUsers
+        localPathToAuthorizers.put(file.getCanonicalPath, uniqueUsers)
         val parent = file.getParentFile.getCanonicalFile
         if (!root.getCanonicalFile.equals(parent))
-        localPathToSuccessors.put(canonicalDirectory, file.getParentFile.getCanonicalPath)
+        localPathToSuccessors.put(file.getCanonicalPath.substring(0, file.getCanonicalPath.length -
+          ReadOnly.OWNERS.toString.length - 1), file.getParentFile.getCanonicalPath)
 
       }
     }
