@@ -29,28 +29,28 @@ object ValidateApprovals extends App {
 
   val root = new File(".")
   walkTree(root)(executionContext)
-
-  val edges = localPathToDependents.keys.foldLeft(Set.empty[(String, String)]) { (edgesAcc: Set[(String, String)],e1: String) =>
-    val destination = localPathToDependents.getOrElse(e1, Nil)
-    if (destination.nonEmpty) {
-      val x =destination.map((e1, _))
-      edgesAcc ++ x
-    }
-    else
-      edgesAcc
+  val dirEdges = localPathToDependents.keys.foldLeft(Set.empty[(String, String)]) { (edgesAcc,e1) =>
+    val destination = localPathToDependents.getOrElse(e1, Set())
+    if (destination.nonEmpty) { edgesAcc ++ destination.map((e1,_)) } else edgesAcc
   }
-  val nodes = localPathToDependents.keys.toSet
-  val dependencyGraph: Digraph[String] = new Digraph(nodes, edges)
+  val dirNodes = localPathToDependents.keys.toSet
+  val dependencyGraph: Digraph[String] = new Digraph(dirNodes, dirEdges)
+
+  val userDependencies = localPathToAuthorizers.keys.foldLeft(Set.empty[(String,String)]) { (edgesAcc,e1: String) =>
+    val users: List[String] = localPathToAuthorizers.getOrElse(e1, List.empty[String])
+    if (users.nonEmpty) { edgesAcc ++ users.flatMap(user => Set[(String, String)]((e1 ,user))) } else edgesAcc }
+  val userNodes = localPathToAuthorizers.keys.toSet
+  val userDigraph: Digraph[String] = new Digraph(userNodes, userDependencies)
+
 
   // Acceptance Check
-  // TODO: Flatmap (6.5 Options as Flow Control)
   val validationMap = Map[String, Boolean]().withDefaultValue(false)
   acceptors.foreach { proposedAcceptor => {
       modifiedFiles.foreach { file =>
         val directory = java.nio.file.Paths.get(modifiedFiles.head).getParent.toString
         val dependencies = dependencyGraph.dfs(directory)
         dependencies.foreach { dep =>
-          val users = localPathToAuthorizers.getOrElse(dep, Nil)
+          val users = localPathToAuthorizers.getOrElse(dep.toString, Nil)
           if (users.contains(proposedAcceptor))
             validationMap.updated(proposedAcceptor, true)
         }
@@ -109,7 +109,7 @@ object ValidateApprovals extends App {
         val canonicalDirectory = file.getCanonicalPath.substring(0, file.getCanonicalPath.length -
           ReadOnly.OWNERS.toString.length - 1)
         val uniqueUsers = localPathToAuthorizers.getOrElse(canonicalDirectory, List[String]()) ::: authorizedUsers
-        localPathToAuthorizers.put(file.getCanonicalPath, uniqueUsers)
+        localPathToAuthorizers.put(canonicalDirectory, uniqueUsers)
         val parent = file.getParentFile.getCanonicalFile
         if (!root.getCanonicalFile.equals(parent))
           localPathToSuccessors.put(canonicalDirectory, file.getParentFile.getCanonicalPath)
